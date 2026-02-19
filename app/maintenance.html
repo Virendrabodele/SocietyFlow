@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Calculator - SocietyFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo::before {
+            content: "🏘️ ";
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--primary);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .form-group small {
+            display: block;
+            color: var(--text-light);
+            margin-top: 0.3rem;
+            font-size: 0.85rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Results Section */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .result-card h3 {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-card .amount {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        /* Table Section */
+        .table-section {
+            grid-column: 1 / -1;
+            margin-top: 2rem;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .table-header h2 {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:hover {
+            background: var(--bg);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Calculation Type Toggle */
+        .calc-type-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .type-btn {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .type-btn:hover {
+            border-color: var(--primary);
+        }
+
+        .type-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .calc-type-selector {
+                flex-direction: column;
+            }
+
+            .type-btn {
+                flex: auto;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">SocietyFlow</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="members.html">Members</a></li>
+                <li><a href="maintenance.html" class="active">Maintenance</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html">Settings</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="page-header">
+            <h1>💰 Maintenance Calculator</h1>
+            <p>Calculate maintenance charges based on BHK, SQFT, or meter readings</p>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Calculator Configuration -->
+            <div class="card">
+                <h2>Setup Calculation</h2>
+
+                <div class="form-group">
+                    <label>Select Calculation Method *</label>
+                    <div class="calc-type-selector">
+                        <button class="type-btn active" data-type="bhk">BHK Based</button>
+                        <button class="type-btn" data-type="sqft">SQFT Based</button>
+                        <button class="type-btn" data-type="metered">Metered (Usage)</button>
+                    </div>
+                </div>
+
+                <div id="bhkConfig">
+                    <h3 style="margin: 1.5rem 0 1rem; color: var(--text);">BHK Configuration</h3>
+                    <div class="form-group">
+                        <label>Monthly Charge per BHK *</label>
+                        <input type="number" id="bhkRate" placeholder="e.g., 500" step="0.01">
+                        <small>Enter amount in ₹</small>
+                    </div>
+                </div>
+
+                <div id="sqftConfig" style="display: none;">
+                    <h3 style="margin: 1.5rem 0 1rem; color: var(--text);">SQFT Configuration</h3>
+                    <div class="form-group">
+                        <label>Rate per SQFT *</label>
+                        <input type="number" id="sqftRate" placeholder="e.g., 5" step="0.01">
+                        <small>Enter amount in ₹ per sqft</small>
+                    </div>
+                </div>
+
+                <div id="meteredConfig" style="display: none;">
+                    <h3 style="margin: 1.5rem 0 1rem; color: var(--text);">Metered Configuration</h3>
+                    <div class="form-group">
+                        <label>Rate per Unit *</label>
+                        <input type="number" id="meteredRate" placeholder="e.g., 50" step="0.01">
+                        <small>Enter amount in ₹ per unit (water/electricity)</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Additional Charges (Optional)</label>
+                    <input type="number" id="additionalCharges" placeholder="e.g., 100" step="0.01">
+                    <small>One-time or monthly additional charges</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Tax/GST Rate (%)</label>
+                    <input type="number" id="taxRate" value="18" placeholder="e.g., 18" step="0.01">
+                    <small>GST or other applicable tax</small>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="calculateMaintenance()">Calculate</button>
+                    <button class="btn btn-secondary" onclick="resetCalculator()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Quick Calculator -->
+            <div class="card">
+                <h2>Quick Calculate</h2>
+
+                <div id="quickCalcBHK">
+                    <div class="form-group">
+                        <label>Select BHK Type *</label>
+                        <select id="quickBhk">
+                            <option value="">Choose BHK</option>
+                            <option value="1">1 BHK</option>
+                            <option value="2">2 BHK</option>
+                            <option value="3">3 BHK</option>
+                            <option value="4">4 BHK</option>
+                            <option value="5">5+ BHK</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="quickCalcSqft" style="display: none;">
+                    <div class="form-group">
+                        <label>Enter SQFT *</label>
+                        <input type="number" id="quickSqft" placeholder="Enter area in sqft">
+                    </div>
+                </div>
+
+                <div id="quickCalcMetered" style="display: none;">
+                    <div class="form-group">
+                        <label>Enter Units Used *</label>
+                        <input type="number" id="quickMetered" placeholder="Enter units">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Number of Months</label>
+                    <input type="number" id="months" value="1" min="1">
+                </div>
+
+                <button class="btn btn-primary" onclick="quickCalculate()" style="width: 100%; margin-top: 1rem;">Calculate Quick</button>
+
+                <!-- Results -->
+                <div class="results-grid" id="quickResults" style="display: none;">
+                    <div class="result-card">
+                        <h3>Monthly Charge</h3>
+                        <div class="amount" id="monthlyAmount">₹0</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Total with Tax</h3>
+                        <div class="amount" id="totalWithTax">₹0</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Tax Amount</h3>
+                        <div class="amount" id="taxAmount">₹0</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Final Total</h3>
+                        <div class="amount" id="finalTotal">₹0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Calculation Results -->
+        <div class="card table-section">
+            <div class="table-header">
+                <h2>All Members Maintenance</h2>
+                <button class="btn btn-secondary" onclick="exportMaintenance()" style="width: 150px;">Export</button>
+            </div>
+            <div id="maintenanceTable">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>Calculate maintenance to see results for all members.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let calculationType = 'bhk';
+        let members = JSON.parse(localStorage.getItem('societyMembers')) || [];
+
+        // Change calculation type
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                calculationType = this.dataset.type;
+
+                document.getElementById('bhkConfig').style.display = calculationType === 'bhk' ? 'block' : 'none';
+                document.getElementById('sqftConfig').style.display = calculationType === 'sqft' ? 'block' : 'none';
+                document.getElementById('meteredConfig').style.display = calculationType === 'metered' ? 'block' : 'none';
+
+                document.getElementById('quickCalcBHK').style.display = calculationType === 'bhk' ? 'block' : 'none';
+                document.getElementById('quickCalcSqft').style.display = calculationType === 'sqft' ? 'block' : 'none';
+                document.getElementById('quickCalcMetered').style.display = calculationType === 'metered' ? 'block' : 'none';
+            });
+        });
+
+        // Quick Calculate
+        function quickCalculate() {
+            let baseAmount = 0;
+            let units = 0;
+
+            if (calculationType === 'bhk') {
+                const bhk = document.getElementById('quickBhk').value;
+                const rate = parseFloat(document.getElementById('bhkRate').value) || 0;
+                if (!bhk || !rate) {
+                    alert('Please select BHK and set rate');
+                    return;
+                }
+                baseAmount = bhk * rate;
+                units = bhk;
+            } else if (calculationType === 'sqft') {
+                const sqft = parseFloat(document.getElementById('quickSqft').value);
+                const rate = parseFloat(document.getElementById('sqftRate').value) || 0;
+                if (!sqft || !rate) {
+                    alert('Please enter SQFT and set rate');
+                    return;
+                }
+                baseAmount = sqft * rate;
+                units = sqft;
+            } else if (calculationType === 'metered') {
+                const metered = parseFloat(document.getElementById('quickMetered').value);
+                const rate = parseFloat(document.getElementById('meteredRate').value) || 0;
+                if (!metered || !rate) {
+                    alert('Please enter units and set rate');
+                    return;
+                }
+                baseAmount = metered * rate;
+                units = metered;
+            }
+
+            const months = parseInt(document.getElementById('months').value) || 1;
+            const additional = parseFloat(document.getElementById('additionalCharges').value) || 0;
+            const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+
+            const monthly = baseAmount + additional;
+            const total = monthly * months;
+            const tax = (total * taxRate) / 100;
+            const finalTotal = total + tax;
+
+            document.getElementById('quickResults').style.display = 'grid';
+            document.getElementById('monthlyAmount').textContent = '₹' + monthly.toFixed(2);
+            document.getElementById('totalWithTax').textContent = '₹' + total.toFixed(2);
+            document.getElementById('taxAmount').textContent = '₹' + tax.toFixed(2);
+            document.getElementById('finalTotal').textContent = '₹' + finalTotal.toFixed(2);
+        }
+
+        // Calculate for all members
+        function calculateMaintenance() {
+            if (members.length === 0) {
+                alert('Please add members first!');
+                return;
+            }
+
+            const additional = parseFloat(document.getElementById('additionalCharges').value) || 0;
+            const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+
+            let results = [];
+            let totalAmount = 0;
+
+            members.forEach(member => {
+                let baseAmount = 0;
+
+                if (member.type === 'bhk' && calculationType === 'bhk') {
+                    const rate = parseFloat(document.getElementById('bhkRate').value) || 0;
+                    baseAmount = member.bhk * rate;
+                } else if (member.type === 'sqft' && calculationType === 'sqft') {
+                    const rate = parseFloat(document.getElementById('sqftRate').value) || 0;
+                    baseAmount = member.sqft * rate;
+                } else if (member.type === 'metered' && calculationType === 'metered') {
+                    const rate = parseFloat(document.getElementById('meteredRate').value) || 0;
+                    baseAmount = 100 * rate; // default 100 units
+                }
+
+                const monthly = baseAmount + additional;
+                const tax = (monthly * taxRate) / 100;
+                const total = monthly + tax;
+
+                results.push({
+                    name: member.name,
+                    unit: member.unit,
+                    base: baseAmount,
+                    monthly: monthly,
+                    tax: tax,
+                    total: total
+                });
+
+                totalAmount += total;
+            });
+
+            displayMaintenanceTable(results, totalAmount);
+        }
+
+        function displayMaintenanceTable(results, total) {
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Member Name</th>
+                            <th>Unit</th>
+                            <th>Base Amount</th>
+                            <th>Monthly Charge</th>
+                            <th>Tax</th>
+                            <th>Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            results.forEach(result => {
+                html += `
+                    <tr>
+                        <td>${result.name}</td>
+                        <td>${result.unit}</td>
+                        <td>₹${result.base.toFixed(2)}</td>
+                        <td>₹${result.monthly.toFixed(2)}</td>
+                        <td>₹${result.tax.toFixed(2)}</td>
+                        <td><strong>₹${result.total.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <div class="results-grid" style="margin-top: 2rem;">
+                    <div class="result-card">
+                        <h3>Total Members</h3>
+                        <div class="amount">${results.length}</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Total Collection</h3>
+                        <div class="amount">₹${total.toFixed(2)}</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Average per Member</h3>
+                        <div class="amount">₹${(total / results.length).toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('maintenanceTable').innerHTML = html;
+        }
+
+        function resetCalculator() {
+            document.getElementById('bhkRate').value = '';
+            document.getElementById('sqftRate').value = '';
+            document.getElementById('meteredRate').value = '';
+            document.getElementById('additionalCharges').value = '';
+            document.getElementById('taxRate').value = '18';
+            document.getElementById('quickResults').style.display = 'none';
+            document.getElementById('maintenanceTable').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>Calculate maintenance to see results for all members.</p>
+                </div>
+            `;
+        }
+
+        function exportMaintenance() {
+            alert('Export functionality coming soon!');
+        }
+    </script>
+</body>
+</html>

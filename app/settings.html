@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - SocietyFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo::before {
+            content: "🏘️ ";
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--primary);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: var(--text-light);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .form-group small {
+            display: block;
+            color: var(--text-light);
+            margin-top: 0.3rem;
+            font-size: 0.85rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        /* Button Group */
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Settings List */
+        .settings-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+        }
+
+        .setting-item h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .setting-item p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .setting-toggle {
+            width: 50px;
+            height: 28px;
+            background: var(--border);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .setting-toggle.active {
+            background: var(--success);
+        }
+
+        .setting-toggle::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s ease;
+        }
+
+        .setting-toggle.active::after {
+            left: 24px;
+        }
+
+        .info-box {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-box p {
+            color: #92400e;
+            margin: 0;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            border-radius: 6px;
+            color: #065f46;
+            display: none;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .setting-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">SocietyFlow</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="members.html">Members</a></li>
+                <li><a href="maintenance.html">Maintenance</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html" class="active">Settings</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="page-header">
+            <h1>⚙️ Settings</h1>
+            <p>Configure your society and system preferences</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('society')">Society Info</div>
+            <div class="tab" onclick="switchTab('state')">State & Tax</div>
+            <div class="tab" onclick="switchTab('charges')">Charges Setup</div>
+            <div class="tab" onclick="switchTab('system')">System</div>
+        </div>
+
+        <!-- Tab: Society Information -->
+        <div id="society" class="tab-content active">
+            <div class="card">
+                <h2>Society Information</h2>
+                <div class="success-message" id="successMsg">✓ Settings saved successfully!</div>
+
+                <div class="form-group">
+                    <label>Society Name *</label>
+                    <input type="text" id="societyName" placeholder="Enter society name">
+                    <small>Official registered name of your society</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Registration Number</label>
+                        <input type="text" id="regNumber" placeholder="e.g., MH-12345">
+                        <small>Society registration number</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Registration Date</label>
+                        <input type="date" id="regDate">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="email" placeholder="info@society.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="phone" placeholder="Enter phone number">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea id="address" rows="3" placeholder="Enter complete address"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" id="city" placeholder="Enter city">
+                    </div>
+                    <div class="form-group">
+                        <label>PIN Code</label>
+                        <input type="text" id="pincode" placeholder="Enter PIN code">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Secretary/Admin Name</label>
+                    <input type="text" id="adminName" placeholder="Enter name">
+                </div>
+
+                <div class="form-group">
+                    <label>Secretary/Admin Contact</label>
+                    <input type="tel" id="adminContact" placeholder="Enter contact number">
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveSocietyInfo()">Save Information</button>
+                    <button class="btn btn-secondary" onclick="resetSocietyForm()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: State & Tax Settings -->
+        <div id="state" class="tab-content">
+            <div class="card">
+                <h2>State-Specific Configuration</h2>
+                <div class="info-box">
+                    <p>📌 Different states have different tax and regulatory requirements. Configure them here.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Select State *</label>
+                    <select id="state" onchange="updateStateInfo()">
+                        <option value="">Choose your state</option>
+                        <option value="maharashtra">Maharashtra</option>
+                        <option value="karnataka">Karnataka</option>
+                        <option value="delhi">Delhi</option>
+                        <option value="tamil-nadu">Tamil Nadu</option>
+                        <option value="uttar-pradesh">Uttar Pradesh</option>
+                        <option value="west-bengal">West Bengal</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>GST Rate (%)</label>
+                        <input type="number" id="gstRate" value="18" step="0.01">
+                        <small>Standard GST rate for your state</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Other Tax Rate (%)</label>
+                        <input type="number" id="otherTaxRate" value="0" step="0.01">
+                        <small>Any additional state-specific tax</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Society ID Format (State-wise)</label>
+                    <input type="text" id="idFormat" placeholder="e.g., MH-YYYY-XXXXX">
+                    <small>Format for society registration/ID number in your state</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Tax Compliance Notes</label>
+                    <textarea id="complianceNotes" rows="3" placeholder="Important compliance notes for your state..."></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveStateSettings()">Save State Settings</button>
+                    <button class="btn btn-secondary" onclick="resetStateForm()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Charges Setup -->
+        <div id="charges" class="tab-content">
+            <div class="card">
+                <h2>Maintenance Charges Configuration</h2>
+                <div class="info-box">
+                    <p>📌 Set default rates for maintenance calculation. These will be used for automatic calculations.</p>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem; color: var(--primary);">BHK-Based Charges</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>1 BHK Monthly Rate (₹)</label>
+                        <input type="number" id="bhk1Rate" placeholder="e.g., 2000" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>2 BHK Monthly Rate (₹)</label>
+                        <input type="number" id="bhk2Rate" placeholder="e.g., 3000" step="0.01">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>3 BHK Monthly Rate (₹)</label>
+                        <input type="number" id="bhk3Rate" placeholder="e.g., 4000" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>4 BHK Monthly Rate (₹)</label>
+                        <input type="number" id="bhk4Rate" placeholder="e.g., 5000" step="0.01">
+                    </div>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem; color: var(--primary);">SQFT-Based Charges</h3>
+                <div class="form-group">
+                    <label>Rate per SQFT (₹)</label>
+                    <input type="number" id="sqftRate" placeholder="e.g., 5" step="0.01">
+                    <small>Cost per square foot of built-up area</small>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem; color: var(--primary);">Additional Charges</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Water Charges per Unit (₹)</label>
+                        <input type="number" id="waterRate" placeholder="e.g., 25" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Electricity Recovery per Unit (₹)</label>
+                        <input type="number" id="electricityRate" placeholder="e.g., 15" step="0.01">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fixed Monthly Charges (₹)</label>
+                    <input type="number" id="fixedCharges" placeholder="e.g., 500" step="0.01">
+                    <small>One-time or recurring fixed charges</small>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveChargesSettings()">Save Charge Configuration</button>
+                    <button class="btn btn-secondary" onclick="resetChargesForm()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: System Settings -->
+        <div id="system" class="tab-content">
+            <div class="card">
+                <h2>System Settings</h2>
+
+                <div class="settings-list">
+                    <div class="setting-item">
+                        <div>
+                            <h3>Email Notifications</h3>
+                            <p>Send email notifications for payment reminders</p>
+                        </div>
+                        <div class="setting-toggle" id="emailNotif" onclick="toggleSetting(this)"></div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div>
+                            <h3>SMS Alerts</h3>
+                            <p>Send SMS for important updates</p>
+                        </div>
+                        <div class="setting-toggle" id="smsNotif" onclick="toggleSetting(this)"></div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div>
+                            <h3>Auto Backup</h3>
+                            <p>Automatically backup data daily</p>
+                        </div>
+                        <div class="setting-toggle active" id="autoBackup" onclick="toggleSetting(this)"></div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div>
+                            <h3>Audit Trail</h3>
+                            <p>Log all changes to member and financial data</p>
+                        </div>
+                        <div class="setting-toggle active" id="auditTrail" onclick="toggleSetting(this)"></div>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem;">Data Management</h2>
+
+                <div class="form-group">
+                    <label>Export Data</label>
+                    <button class="btn btn-secondary" onclick="exportData()" style="width: 100%;">📥 Export All Data</button>
+                    <small>Download all your data as backup</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Import Data</label>
+                    <input type="file" id="importFile" accept=".json">
+                    <button class="btn btn-secondary" onclick="importData()" style="width: 100%; margin-top: 0.5rem;">📤 Import Data</button>
+                    <small>Restore from previous backup</small>
+                </div>
+
+                <div class="form-group" style="margin-top: 2rem;">
+                    <label style="color: var(--danger); font-weight: 600;">⚠️ Danger Zone</label>
+                    <p style="color: var(--text-light); margin-bottom: 1rem;">Delete all data - this action cannot be undone</p>
+                    <button class="btn btn-danger" onclick="deleteAllData()" style="width: 100%;">🗑️ Delete All Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load settings from localStorage
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            
+            // Load society info
+            document.getElementById('societyName').value = settings.societyName || '';
+            document.getElementById('regNumber').value = settings.regNumber || '';
+            document.getElementById('regDate').value = settings.regDate || '';
+            document.getElementById('email').value = settings.email || '';
+            document.getElementById('phone').value = settings.phone || '';
+            document.getElementById('address').value = settings.address || '';
+            document.getElementById('city').value = settings.city || '';
+            document.getElementById('pincode').value = settings.pincode || '';
+            document.getElementById('adminName').value = settings.adminName || '';
+            document.getElementById('adminContact').value = settings.adminContact || '';
+
+            // Load state settings
+            document.getElementById('state').value = settings.state || '';
+            document.getElementById('gstRate').value = settings.gstRate || 18;
+            document.getElementById('otherTaxRate').value = settings.otherTaxRate || 0;
+            document.getElementById('idFormat').value = settings.idFormat || '';
+            document.getElementById('complianceNotes').value = settings.complianceNotes || '';
+
+            // Load charges
+            document.getElementById('bhk1Rate').value = settings.bhk1Rate || '';
+            document.getElementById('bhk2Rate').value = settings.bhk2Rate || '';
+            document.getElementById('bhk3Rate').value = settings.bhk3Rate || '';
+            document.getElementById('bhk4Rate').value = settings.bhk4Rate || '';
+            document.getElementById('sqftRate').value = settings.sqftRate || '';
+            document.getElementById('waterRate').value = settings.waterRate || '';
+            document.getElementById('electricityRate').value = settings.electricityRate || '';
+            document.getElementById('fixedCharges').value = settings.fixedCharges || '';
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Save society info
+        function saveSocietyInfo() {
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            
+            settings.societyName = document.getElementById('societyName').value;
+            settings.regNumber = document.getElementById('regNumber').value;
+            settings.regDate = document.getElementById('regDate').value;
+            settings.email = document.getElementById('email').value;
+            settings.phone = document.getElementById('phone').value;
+            settings.address = document.getElementById('address').value;
+            settings.city = document.getElementById('city').value;
+            settings.pincode = document.getElementById('pincode').value;
+            settings.adminName = document.getElementById('adminName').value;
+            settings.adminContact = document.getElementById('adminContact').value;
+
+            localStorage.setItem('societySettings', JSON.stringify(settings));
+            showSuccessMessage();
+        }
+
+        // Save state settings
+        function saveStateSettings() {
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            
+            settings.state = document.getElementById('state').value;
+            settings.gstRate = document.getElementById('gstRate').value;
+            settings.otherTaxRate = document.getElementById('otherTaxRate').value;
+            settings.idFormat = document.getElementById('idFormat').value;
+            settings.complianceNotes = document.getElementById('complianceNotes').value;
+
+            localStorage.setItem('societySettings', JSON.stringify(settings));
+            showSuccessMessage();
+        }
+
+        // Save charges settings
+        function saveChargesSettings() {
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            
+            settings.bhk1Rate = document.getElementById('bhk1Rate').value;
+            settings.bhk2Rate = document.getElementById('bhk2Rate').value;
+            settings.bhk3Rate = document.getElementById('bhk3Rate').value;
+            settings.bhk4Rate = document.getElementById('bhk4Rate').value;
+            settings.sqftRate = document.getElementById('sqftRate').value;
+            settings.waterRate = document.getElementById('waterRate').value;
+            settings.electricityRate = document.getElementById('electricityRate').value;
+            settings.fixedCharges = document.getElementById('fixedCharges').value;
+
+            localStorage.setItem('societySettings', JSON.stringify(settings));
+            showSuccessMessage();
+        }
+
+        // Toggle settings
+        function toggleSetting(element) {
+            element.classList.toggle('active');
+        }
+
+        // Show success message
+        function showSuccessMessage() {
+            const msg = document.getElementById('successMsg');
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+
+        // Reset forms
+        function resetSocietyForm() { loadSettings(); }
+        function resetStateForm() { loadSettings(); }
+        function resetChargesForm() { loadSettings(); }
+
+        // Export data
+        function exportData() {
+            const data = {
+                members: JSON.parse(localStorage.getItem('societyMembers')) || [],
+                settings: JSON.parse(localStorage.getItem('societySettings')) || [],
+                exportDate: new Date().toLocaleString()
+            };
+            
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `society_backup_${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Import data
+        function importData() {
+            const file = document.getElementById('importFile').files[0];
+            if (!file) {
+                alert('Please select a file to import');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.members) localStorage.setItem('societyMembers', JSON.stringify(data.members));
+                    if (data.settings) localStorage.setItem('societySettings', JSON.stringify(data.settings));
+                    alert('Data imported successfully!');
+                    location.reload();
+                } catch (err) {
+                    alert('Error importing data: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Delete all data
+        function deleteAllData() {
+            if (confirm('Are you absolutely sure? This will delete ALL data and cannot be undone!')) {
+                if (confirm('Type "DELETE" to confirm permanent deletion')) {
+                    const response = prompt('Type DELETE to confirm:');
+                    if (response === 'DELETE') {
+                        localStorage.removeItem('societyMembers');
+                        localStorage.removeItem('societySettings');
+                        alert('All data has been deleted');
+                        location.reload();
+                    }
+                }
+            }
+        }
+
+        // Update state info
+        function updateStateInfo() {
+            const stateNames = {
+                'maharashtra': 'Maharashtra',
+                'karnataka': 'Karnataka',
+                'delhi': 'Delhi',
+                'tamil-nadu': 'Tamil Nadu',
+                'uttar-pradesh': 'Uttar Pradesh',
+                'west-bengal': 'West Bengal'
+            };
+            
+            const selected = document.getElementById('state').value;
+            if (selected && stateNames[selected]) {
+                alert(`Settings for ${stateNames[selected]} loaded. GST Rate: 18%`);
+            }
+        }
+
+        // Load settings on page load
+        window.addEventListener('load', loadSettings);
+    </script>
+</body>
+</html>

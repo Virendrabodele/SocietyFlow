@@ -1,0 +1,158 @@
+╔═══════════════════════════════════════════════════════════════╗
+║           🏘️ SocietyFlow v2.1 - Quick Setup Guide           ║
+╚═══════════════════════════════════════════════════════════════╝
+
+STEP 1: OPEN APPLICATION
+═════════════════════════
+1. Go to: app/ folder
+2. Open: login.html in your web browser
+
+
+STEP 2: LOGIN WITH DEMO ACCOUNT
+═══════════════════════════════════
+ADMIN ACCOUNT:
+  Email: demo@society.com
+  Password: Demo@123
+
+RESIDENT ACCOUNT:
+  Email: resident@society.com
+  Password: Demo@123
+
+
+STEP 3: EXPLORE
+═══════════════
+- See the dashboard
+- Create a society (Admin only)
+- Add members
+- Calculate maintenance
+- Generate reports
+- Compare Admin vs Resident access
+
+
+STEP 4: READ DOCUMENTATION
+═══════════════════════════
+Go to: documentation/ folder
+
+START HERE:
+  → 00_READ_ME_FIRST.md (Complete guide)
+
+FOR ROLES:
+  → RBAC_GUIDE.md (Role definitions)
+  → ROLE_IMPLEMENTATION.md (How to implement)
+
+FOR SETUP:
+  → QUICK_START.md (5-minute setup)
+  → START_HERE.md (Getting started)
+
+FOR DEVELOPERS:
+  → DEVELOPER.md (Technical details)
+  → GOOGLE_SHEETS_GUIDE.md (Google integration)
+
+
+FOLDER STRUCTURE
+════════════════
+SocietyFlow/
+  ├── app/              ← Open login.html from here
+  ├── documentation/    ← Read these files
+  └── README.md         ← Full documentation
+
+
+FOLDER CONTENTS
+═══════════════
+
+app/ (HTML Application Files):
+  - login.html          ← User login & registration
+  - dashboard.html      ← Society management
+  - index.html          ← Main application
+  - members.html        ← Member management
+  - maintenance.html    ← Maintenance calculator
+  - reports.html        ← Report generation
+  - settings.html       ← Configuration
+
+documentation/ (Complete Guides):
+  - 00_READ_ME_FIRST.md (START HERE!)
+  - RBAC_COMPLETE.md
+  - RBAC_GUIDE.md
+  - ROLE_IMPLEMENTATION.md
+  - VERSION_2_SUMMARY.md
+  - MULTI_USER_SETUP.md
+  - GOOGLE_SHEETS_GUIDE.md
+  - START_HERE.md
+  - QUICK_START.md
+  - README.md
+  - DEVELOPER.md
+  - VISUAL_GUIDE.md
+  - SUMMARY.md
+
+
+FEATURES AT A GLANCE
+════════════════════
+✅ User login & registration
+✅ Admin & Resident roles
+✅ Multi-user support
+✅ Multi-society management
+✅ Member management
+✅ Maintenance calculator (3 types)
+✅ Custom reports
+✅ State-specific configuration
+✅ Google Sheets integration (framework)
+✅ Data backup/restore
+
+
+QUICK DEMO
+══════════
+1. Open app/login.html
+2. Login as demo@society.com / Demo@123
+3. Click "Open" on a society
+4. Explore the features
+5. Logout and login as resident@society.com / Demo@123
+6. See the difference in access
+
+
+TECHNICAL DETAILS
+═════════════════
+• Built with: HTML5, CSS3, JavaScript
+• No external dependencies
+• Data storage: Browser LocalStorage
+• Mobile responsive: Yes
+• Offline support: Yes
+• Database needed: No (yet)
+
+
+FOR MORE INFORMATION
+════════════════════
+Open: documentation/00_READ_ME_FIRST.md
+
+This file contains everything you need to know about:
+- How to use the system
+- Role-based access control
+- Multi-user features
+- Implementation guides
+- And much more!
+
+
+NEED HELP?
+══════════
+Check the documentation folder - every question is answered there!
+
+Questions about roles?
+  → See: RBAC_GUIDE.md
+
+How to implement?
+  → See: ROLE_IMPLEMENTATION.md
+
+Getting started?
+  → See: QUICK_START.md
+
+Everything else?
+  → See: 00_READ_ME_FIRST.md
+
+
+ENJOY!
+══════
+You now have a professional, enterprise-ready society management system.
+
+Ready to use, easy to customize, simple to deploy.
+
+Happy managing! 🏘️
+

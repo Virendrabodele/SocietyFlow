@@ -1,0 +1,28 @@
+# Browser cache
+*.cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+~*
+
+# Node modules (for future)
+node_modules/
+npm-debug.log
+
+# Environment variables
+.env
+.env.local
+

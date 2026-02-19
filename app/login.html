@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SocietyFlow - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f0f9ff;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.12);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 90%;
+            max-width: 1200px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.6s ease;
+        }
+
+        /* Left side - Branding */
+        .login-branding {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 4rem;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .logo-large {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            animation: bounce 0.6s ease 0.3s both;
+        }
+
+        .login-branding h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            font-weight: 700;
+        }
+
+        .login-branding p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            margin-bottom: 2rem;
+        }
+
+        .features-list {
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .feature-item::before {
+            content: "✓";
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* Right side - Login Form */
+        .login-form-section {
+            background: var(--surface);
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .form-tab {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--text-light);
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .form-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .form-tab:hover {
+            color: var(--primary);
+        }
+
+        .form-content {
+            display: none;
+        }
+
+        .form-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.85rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 0.3rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle .toggle-btn {
+            position: absolute;
+            right: 1rem;
+            top: 2.8rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 1.2rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .google-btn {
+            background: white;
+            color: var(--text);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .google-btn:hover {
+            border-color: var(--primary);
+            background: var(--bg);
+        }
+
+        .google-icon {
+            font-size: 1.2rem;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            color: var(--text-light);
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .remember-me input {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .forgot-password {
+            text-align: right;
+            margin-top: 1rem;
+        }
+
+        .forgot-password a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        .signup-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-light);
+        }
+
+        .signup-link a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .signup-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            border-left: 4px solid var(--danger);
+            padding: 1rem;
+            border-radius: 6px;
+            color: #991b1b;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            border-radius: 6px;
+            color: #065f46;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .info-box {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            padding: 1rem;
+            border-radius: 6px;
+            color: #92400e;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 968px) {
+            .login-container {
+                grid-template-columns: 1fr;
+            }
+
+            .login-branding {
+                padding: 2rem;
+            }
+
+            .login-branding h1 {
+                font-size: 1.8rem;
+            }
+
+            .login-form-section {
+                padding: 2rem;
+            }
+
+            .login-container {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Left Side - Branding -->
+        <div class="login-branding">
+            <div class="logo-large">🏘️</div>
+            <h1>SocietyFlow</h1>
+            <p>Professional Society Management System</p>
+            
+            <div class="features-list">
+                <div class="feature-item">Manage Multiple Societies</div>
+                <div class="feature-item">Flexible Maintenance Calculation</div>
+                <div class="feature-item">Custom Report Generation</div>
+                <div class="feature-item">Google Sheets Integration</div>
+                <div class="feature-item">Real-time Data Sync</div>
+            </div>
+        </div>
+
+        <!-- Right Side - Login Form -->
+        <div class="login-form-section">
+            <!-- Tabs -->
+            <div class="form-tabs">
+                <button class="form-tab active" onclick="switchTab('login')">Sign In</button>
+                <button class="form-tab" onclick="switchTab('signup')">Create Account</button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login" class="form-content active">
+                <div class="error-message" id="loginError"></div>
+                <div class="success-message" id="loginSuccess"></div>
+
+                <div class="form-group">
+                    <label>Email Address *</label>
+                    <input type="email" id="loginEmail" placeholder="your@email.com" required>
+                    <small>Your registered email address</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Password *</label>
+                    <div class="password-toggle">
+                        <input type="password" id="loginPassword" placeholder="Enter password" required>
+                        <button type="button" class="toggle-btn" onclick="togglePasswordVisibility('loginPassword')">👁️</button>
+                    </div>
+                </div>
+
+                <div class="remember-me">
+                    <input type="checkbox" id="rememberMe">
+                    <label for="rememberMe">Remember me</label>
+                </div>
+
+                <div class="forgot-password">
+                    <a href="#" onclick="handleForgotPassword(event)">Forgot Password?</a>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="handleLogin()">Sign In</button>
+                </div>
+
+                <div class="divider">Or continue with</div>
+
+                <button class="google-btn" onclick="handleGoogleLogin()">
+                    <span class="google-icon">🔵</span>
+                    <span>Google Account</span>
+                </button>
+
+                <div class="signup-link">
+                    Don't have an account? <a href="#" onclick="switchTab('signup'); event.preventDefault();">Create one</a>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signup" class="form-content">
+                <div class="error-message" id="signupError"></div>
+                <div class="success-message" id="signupSuccess"></div>
+
+                <div class="info-box">
+                    ℹ️ Create an account to manage your societies and access Google Sheets integration
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="signupName" placeholder="John Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email Address *</label>
+                    <input type="email" id="signupEmail" placeholder="your@email.com" required>
+                    <small>We'll never share your email</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Society Name *</label>
+                    <input type="text" id="signupSociety" placeholder="e.g., Green Park Apartments" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Select State *</label>
+                    <select id="signupState" required>
+                        <option value="">Choose your state</option>
+                        <option value="maharashtra">Maharashtra</option>
+                        <option value="karnataka">Karnataka</option>
+                        <option value="delhi">Delhi</option>
+                        <option value="tamil-nadu">Tamil Nadu</option>
+                        <option value="uttar-pradesh">Uttar Pradesh</option>
+                        <option value="west-bengal">West Bengal</option>
+                        <option value="others">Other States</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Your Role *</label>
+                    <select id="signupRole" required>
+                        <option value="">Choose your role</option>
+                        <option value="admin">Admin (Can manage society, members, reports)</option>
+                        <option value="resident">Resident/User (Can view only assigned data)</option>
+                    </select>
+                    <small>Admins have full access. Residents can view specific information.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Password *</label>
+                    <div class="password-toggle">
+                        <input type="password" id="signupPassword" placeholder="Min 8 characters" required>
+                        <button type="button" class="toggle-btn" onclick="togglePasswordVisibility('signupPassword')">👁️</button>
+                    </div>
+                    <small>At least 8 characters with uppercase, lowercase, and number</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm Password *</label>
+                    <div class="password-toggle">
+                        <input type="password" id="signupPasswordConfirm" placeholder="Confirm password" required>
+                        <button type="button" class="toggle-btn" onclick="togglePasswordVisibility('signupPasswordConfirm')">👁️</button>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="handleSignup()">Create Account</button>
+                </div>
+
+                <div class="signup-link">
+                    Already have an account? <a href="#" onclick="switchTab('login'); event.preventDefault();">Sign in here</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.form-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.form-tab').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Toggle password visibility
+        function togglePasswordVisibility(fieldId) {
+            const field = document.getElementById(fieldId);
+            field.type = field.type === 'password' ? 'text' : 'password';
+        }
+
+        // Login Handler
+        function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            const successDiv = document.getElementById('loginSuccess');
+
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            // Validation
+            if (!email || !password) {
+                errorDiv.innerHTML = '❌ Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (!email.includes('@')) {
+                errorDiv.innerHTML = '❌ Invalid email address';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Check localStorage for user
+            const users = JSON.parse(localStorage.getItem('societyUsers')) || [];
+            const user = users.find(u => u.email === email && u.password === password);
+
+            if (user) {
+                successDiv.innerHTML = '✓ Login successful! Redirecting...';
+                successDiv.style.display = 'block';
+                
+                // Store logged-in user
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                localStorage.setItem('userLoginTime', new Date().toISOString());
+                
+                // Redirect after 1 second
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } else {
+                errorDiv.innerHTML = '❌ Invalid email or password';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Signup Handler
+        function handleSignup() {
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const society = document.getElementById('signupSociety').value;
+            const state = document.getElementById('signupState').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('signupPasswordConfirm').value;
+            const role = document.getElementById('signupRole').value;
+            const errorDiv = document.getElementById('signupError');
+            const successDiv = document.getElementById('signupSuccess');
+
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            // Validation
+            if (!name || !email || !society || !state || !password || !confirmPassword || !role) {
+                errorDiv.innerHTML = '❌ Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (!email.includes('@')) {
+                errorDiv.innerHTML = '❌ Invalid email address';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (password.length < 8) {
+                errorDiv.innerHTML = '❌ Password must be at least 8 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                errorDiv.innerHTML = '❌ Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (!validatePassword(password)) {
+                errorDiv.innerHTML = '❌ Password must contain uppercase, lowercase, and number';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Check if user exists
+            const users = JSON.parse(localStorage.getItem('societyUsers')) || [];
+            if (users.find(u => u.email === email)) {
+                errorDiv.innerHTML = '❌ Email already registered';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Create new user with role
+            const newUser = {
+                id: Date.now(),
+                name: name,
+                email: email,
+                society: society,
+                state: state,
+                password: password, // NOTE: In production, this should be hashed!
+                createdAt: new Date().toISOString(),
+                googleSheetId: null,
+                isVerified: false,
+                role: role // ← ROLE ADDED HERE
+            };
+
+            users.push(newUser);
+            localStorage.setItem('societyUsers', JSON.stringify(users));
+
+            successDiv.innerHTML = '✓ Account created successfully! Redirecting to login...';
+            successDiv.style.display = 'block';
+
+            setTimeout(() => {
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('loginPassword').value = '';
+                switchTab('login');
+                document.getElementById('signupSuccess').style.display = 'none';
+            }, 1500);
+        }
+
+        // Password validation
+        function validatePassword(password) {
+            const hasUppercase = /[A-Z]/.test(password);
+            const hasLowercase = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            return hasUppercase && hasLowercase && hasNumber;
+        }
+
+        // Google Login Handler
+        function handleGoogleLogin() {
+            alert('🔵 Google Login Integration:\n\nTo enable Google login:\n1. Create a Google Cloud project\n2. Get OAuth 2.0 credentials\n3. Add Google Sign-In library\n4. Implement OAuth flow\n\nFor now, you can use demo credentials to test.');
+        }
+
+        // Forgot Password Handler
+        function handleForgotPassword(event) {
+            event.preventDefault();
+            alert('Password reset email would be sent to your registered email.\n\nNote: Email functionality requires backend setup.');
+        }
+
+        // Check if user is already logged in
+        window.addEventListener('load', function() {
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                // Redirect to dashboard if already logged in
+                // window.location.href = 'dashboard.html';
+            }
+        });
+
+        // Demo login credentials
+        console.log('Demo Credentials:');
+        console.log('Email: demo@society.com');
+        console.log('Password: Demo@123');
+        
+        // Create demo user on first load
+        if (!localStorage.getItem('societyUsers')) {
+            const demoUsers = [
+                {
+                    id: 1,
+                    name: 'Demo Admin',
+                    email: 'demo@society.com',
+                    society: 'Green Park Apartments',
+                    state: 'maharashtra',
+                    password: 'Demo@123',
+                    createdAt: new Date().toISOString(),
+                    googleSheetId: null,
+                    isVerified: true,
+                    role: 'admin' // ← ROLE ADDED
+                },
+                {
+                    id: 2,
+                    name: 'Demo Resident',
+                    email: 'resident@society.com',
+                    society: 'Green Park Apartments',
+                    state: 'maharashtra',
+                    password: 'Demo@123',
+                    createdAt: new Date().toISOString(),
+                    googleSheetId: null,
+                    isVerified: true,
+                    role: 'resident' // ← RESIDENT ROLE
+                }
+            ];
+            localStorage.setItem('societyUsers', JSON.stringify(demoUsers));
+        }
+    </script>
+</body>
+</html>

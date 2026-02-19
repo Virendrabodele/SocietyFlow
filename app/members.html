@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Management - SocietyFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo::before {
+            content: "🏘️ ";
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--primary);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .page-header p {
+            color: var(--text-light);
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        /* Form Section */
+        .form-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            height: fit-content;
+        }
+
+        .form-section h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Members Table Section */
+        .table-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .table-header h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .search-box {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            width: 250px;
+            font-size: 0.95rem;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        thead {
+            background: var(--bg);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:hover {
+            background: var(--bg);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 0.75rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #0891b2;
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Stats Cards */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">SocietyFlow</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="members.html" class="active">Members</a></li>
+                <li><a href="maintenance.html">Maintenance</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html">Settings</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="page-header">
+            <h1>👥 Member Management</h1>
+            <p>Add, view, and manage all society members</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <h3>Total Members</h3>
+                <div class="number" id="totalMembers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>BHK Based</h3>
+                <div class="number" id="bhkMembers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>SQFT Based</h3>
+                <div class="number" id="sqftMembers">0</div>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Add Member Form -->
+            <div class="form-section">
+                <h2>Add New Member</h2>
+                <form id="memberForm">
+                    <div class="form-group">
+                        <label>Member Name *</label>
+                        <input type="text" id="memberName" placeholder="Enter name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="memberPhone" placeholder="Enter phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="memberEmail" placeholder="Enter email">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Unit/Flat Number *</label>
+                        <input type="text" id="unitNumber" placeholder="e.g., A-101" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Calculation Type *</label>
+                        <select id="calculationType" required>
+                            <option value="">Select Type</option>
+                            <option value="bhk">BHK Based</option>
+                            <option value="sqft">SQFT Based</option>
+                            <option value="metered">Metered (per usage)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="bhkGroup" style="display: none;">
+                        <label>Number of BHK *</label>
+                        <select id="bhkValue">
+                            <option value="1">1 BHK</option>
+                            <option value="2">2 BHK</option>
+                            <option value="3">3 BHK</option>
+                            <option value="4">4 BHK</option>
+                            <option value="5">5+ BHK</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="sqftGroup" style="display: none;">
+                        <label>Built-up Area (SQFT) *</label>
+                        <input type="number" id="sqftValue" placeholder="Enter area in sqft">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="memberStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="vacant">Vacant</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </form>
+            </div>
+
+            <!-- Members Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Members List</h2>
+                    <input type="text" class="search-box" id="searchBox" placeholder="Search members...">
+                </div>
+
+                <div id="membersList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <p>No members added yet. Add your first member using the form.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize members array from localStorage
+        let members = JSON.parse(localStorage.getItem('societyMembers')) || [];
+
+        // Show/hide fields based on calculation type
+        document.getElementById('calculationType').addEventListener('change', function(e) {
+            document.getElementById('bhkGroup').style.display = e.target.value === 'bhk' ? 'block' : 'none';
+            document.getElementById('sqftGroup').style.display = e.target.value === 'sqft' ? 'block' : 'none';
+        });
+
+        // Add member
+        document.getElementById('memberForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const member = {
+                id: Date.now(),
+                name: document.getElementById('memberName').value,
+                phone: document.getElementById('memberPhone').value,
+                email: document.getElementById('memberEmail').value,
+                unit: document.getElementById('unitNumber').value,
+                type: document.getElementById('calculationType').value,
+                bhk: document.getElementById('bhkValue').value,
+                sqft: document.getElementById('sqftValue').value,
+                status: document.getElementById('memberStatus').value,
+                joinDate: new Date().toLocaleDateString()
+            };
+
+            members.push(member);
+            localStorage.setItem('societyMembers', JSON.stringify(members));
+            
+            // Reset form
+            this.reset();
+            document.getElementById('bhkGroup').style.display = 'none';
+            document.getElementById('sqftGroup').style.display = 'none';
+            
+            // Update display
+            displayMembers();
+            updateStats();
+            alert('Member added successfully!');
+        });
+
+        // Display members in table
+        function displayMembers(membersToShow = members) {
+            const container = document.getElementById('membersList');
+            
+            if (membersToShow.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <p>No members found.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Unit</th>
+                            <th>Type</th>
+                            <th>Details</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            membersToShow.forEach(member => {
+                const details = member.type === 'bhk' ? `${member.bhk} BHK` : 
+                               member.type === 'sqft' ? `${member.sqft} SQFT` : 'Metered';
+                
+                tableHTML += `
+                    <tr>
+                        <td><strong>${member.name}</strong></td>
+                        <td>${member.unit}</td>
+                        <td>${member.type.toUpperCase()}</td>
+                        <td>${details}</td>
+                        <td><span style="background: ${member.status === 'active' ? '#d1fae5' : '#fee2e2'}; color: ${member.status === 'active' ? '#065f46' : '#991b1b'}; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">${member.status}</span></td>
+                        <td>${member.joinDate}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-small btn-edit" onclick="editMember(${member.id})">Edit</button>
+                                <button class="btn-small btn-delete" onclick="deleteMember(${member.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHTML;
+        }
+
+        // Delete member
+        function deleteMember(id) {
+            if (confirm('Are you sure you want to delete this member?')) {
+                members = members.filter(m => m.id !== id);
+                localStorage.setItem('societyMembers', JSON.stringify(members));
+                displayMembers();
+                updateStats();
+            }
+        }
+
+        // Edit member (placeholder)
+        function editMember(id) {
+            alert('Edit functionality coming soon!');
+        }
+
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = members.filter(m => 
+                m.name.toLowerCase().includes(searchTerm) || 
+                m.unit.toLowerCase().includes(searchTerm)
+            );
+            displayMembers(filtered);
+        });
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalMembers').textContent = members.length;
+            document.getElementById('bhkMembers').textContent = members.filter(m => m.type === 'bhk').length;
+            document.getElementById('sqftMembers').textContent = members.filter(m => m.type === 'sqft').length;
+        }
+
+        // Initial display
+        displayMembers();
+        updateStats();
+    </script>
+</body>
+</html>

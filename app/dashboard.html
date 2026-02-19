@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SocietyFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .logo::before {
+            content: "🏘️ ";
+        }
+
+        .user-greeting {
+            font-size: 1rem;
+            color: var(--text-light);
+        }
+
+        .user-greeting strong {
+            color: var(--text);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .google-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--warning);
+        }
+
+        .status-indicator.connected {
+            background: var(--success);
+        }
+
+        .logout-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .add-society-btn {
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .add-society-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Stats Section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card h3 {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Societies Grid */
+        .societies-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .societies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .society-card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+        }
+
+        .society-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(30, 64, 175, 0.15);
+        }
+
+        .society-card-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .society-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .society-card-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .society-card-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .society-card-body {
+            padding: 1.5rem;
+        }
+
+        .society-info {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .society-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .action-btn.secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .action-btn.secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .action-btn.danger {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .action-btn.danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Google Sheets Setup */
+        .sheets-setup {
+            background: linear-gradient(135deg, #fef3c7 0%, #fef08a 100%);
+            border: 2px solid var(--warning);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .sheets-setup h2 {
+            color: #92400e;
+            margin-bottom: 1rem;
+        }
+
+        .sheets-setup p {
+            color: #b45309;
+            margin-bottom: 1rem;
+        }
+
+        .sheets-setup-btn {
+            padding: 0.75rem 2rem;
+            background: var(--warning);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .sheets-setup-btn:hover {
+            background: #d97706;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 2px dashed var(--border);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h2 {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .modal-footer button {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .header-right {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .societies-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .add-society-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            <div class="logo">SocietyFlow</div>
+            <div class="user-greeting">
+                Welcome, <strong id="userName">User</strong>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <div class="google-status">
+                <div class="status-indicator" id="googleStatus"></div>
+                <span id="googleStatusText">Not Connected</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg); border-radius: 6px;">
+                <span id="userRole" style="font-weight: 600; color: var(--primary);">Admin</span>
+                <span style="color: var(--text-light);">|</span>
+                <span id="userEmail" style="font-size: 0.9rem; color: var(--text-light);">user@example.com</span>
+            </div>
+            <button class="logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Google Sheets Setup Warning -->
+        <div class="sheets-setup" id="sheetsSetup">
+            <h2>🔵 Connect Google Sheets</h2>
+            <p>Sync your society data with Google Sheets for automatic backup and real-time collaboration.</p>
+            <button class="sheets-setup-btn" onclick="setupGoogleSheets()">Connect Google Sheets</button>
+        </div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>📊 Your Societies</h1>
+            <button id="addSocietyButton" class="add-society-btn" onclick="openAddSocietyModal()">+ Add New Society</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Societies</h3>
+                <div class="number" id="totalSocieties">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Members</h3>
+                <div class="number" id="totalMembers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Data Synced</h3>
+                <div class="number" id="dataSynced">0%</div>
+            </div>
+        </div>
+
+        <!-- Societies -->
+        <div class="societies-section">
+            <h2 class="section-title">🏢 Your Managed Societies</h2>
+            <div class="societies-grid" id="societiesGrid">
+                <!-- Societies will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Society Modal -->
+    <div class="modal" id="addSocietyModal">
+        <div class="modal-content">
+            <div class="modal-header">Add New Society</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Society Name *</label>
+                    <input type="text" id="newSocietyName" placeholder="e.g., Green Park Apartments">
+                </div>
+                <div class="form-group">
+                    <label>Number of Units *</label>
+                    <input type="number" id="newSocietyUnits" placeholder="e.g., 50" min="1">
+                </div>
+                <div class="form-group">
+                    <label>City *</label>
+                    <input type="text" id="newSocietyCity" placeholder="e.g., Mumbai">
+                </div>
+                <div class="form-group">
+                    <label>State *</label>
+                    <select id="newSocietyState">
+                        <option value="">Select State</option>
+                        <option value="maharashtra">Maharashtra</option>
+                        <option value="karnataka">Karnataka</option>
+                        <option value="delhi">Delhi</option>
+                        <option value="tamil-nadu">Tamil Nadu</option>
+                        <option value="uttar-pradesh">Uttar Pradesh</option>
+                        <option value="others">Other States</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button style="background: var(--danger); color: white;" onclick="closeModal('addSocietyModal')">Cancel</button>
+                <button style="background: var(--primary); color: white;" onclick="createSociety()">Create Society</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Sheets Setup Modal -->
+    <div class="modal" id="googleSheetsModal">
+        <div class="modal-content">
+            <div class="modal-header">Connect Google Sheets</div>
+            <div class="modal-body">
+                <p>To connect Google Sheets:</p>
+                <ol style="margin-left: 1.5rem; color: var(--text-light);">
+                    <li>Click the button below to authorize SocietyFlow</li>
+                    <li>Select your Google account</li>
+                    <li>Grant permission to access Google Sheets</li>
+                    <li>A new Google Sheet will be created for your society</li>
+                </ol>
+                <p style="margin-top: 1.5rem; color: var(--text-light); font-size: 0.9rem;">
+                    <strong>Note:</strong> This requires OAuth 2.0 setup. For now, you can manually create a spreadsheet and enter the share link.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button style="background: var(--danger); color: white;" onclick="closeModal('googleSheetsModal')">Cancel</button>
+                <button style="background: var(--success); color: white;" onclick="connectGoogleSheets()">Connect Google Account</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load user data on page load
+        window.addEventListener('load', function() {
+            const currentUser = localStorage.getItem('currentUser');
+            
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const user = JSON.parse(currentUser);
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userRole').textContent = user.role === 'admin' ? 'Admin' : 'Resident';
+            document.getElementById('userEmail').textContent = user.email;
+
+            // Apply role-based access
+            if (user.role === 'resident') {
+                // Hide admin-only features
+                document.getElementById('addSocietyButton').style.display = 'none';
+                document.getElementById('sheetsSetup').style.display = 'none';
+                
+                // Show resident message
+                showResidentDashboard(user);
+            } else {
+                // Show admin dashboard
+                loadUserSocieties(user.id);
+            }
+        });
+
+        // Show resident-only dashboard
+        function showResidentDashboard(user) {
+            const grid = document.getElementById('societiesGrid');
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1;">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <h2>Welcome, ${user.name}</h2>
+                        <p>You are logged in as a Resident. Contact your society admin for member and maintenance details.</p>
+                        <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
+                            <strong>Your Role:</strong> Resident/User<br>
+                            <strong>Email:</strong> ${user.email}
+                        </p>
+                        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                            <button class="add-society-btn" onclick="viewPersonalInfo()" style="background: var(--accent);">View My Information</button>
+                            <button class="add-society-btn" onclick="viewMyMaintenance()" style="background: var(--success);">View My Maintenance</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('totalSocieties').textContent = '1 (Limited Access)';
+            document.getElementById('totalMembers').textContent = 'N/A';
+            document.getElementById('dataSynced').textContent = 'N/A';
+        }
+
+        // Functions for resident access
+        function viewPersonalInfo() {
+            alert('Personal Information View - Coming Soon!\n\nYou can see your unit details and profile information here.');
+        }
+
+        function viewMyMaintenance() {
+            alert('My Maintenance View - Coming Soon!\n\nYou can see your monthly charges and payment status here.');
+        }
+
+        // Load user societies (admin only)
+        function loadUserSocieties(userId) {
+            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
+            const userSocieties = allSocieties.filter(s => s.userId === userId);
+
+            document.getElementById('totalSocieties').textContent = userSocieties.length;
+
+            if (userSocieties.length === 0) {
+                displayEmptyState();
+                return;
+            }
+
+            displaySocieties(userSocieties);
+            updateStats(userSocieties);
+        }
+
+        // Display societies
+        function displaySocieties(societies) {
+            const grid = document.getElementById('societiesGrid');
+            grid.innerHTML = '';
+
+            societies.forEach(society => {
+                const card = document.createElement('div');
+                card.className = 'society-card';
+                card.innerHTML = `
+                    <div class="society-card-header">
+                        <div class="society-icon">🏘️</div>
+                        <h2>${society.name}</h2>
+                        <p>${society.city}, ${society.state}</p>
+                    </div>
+                    <div class="society-card-body">
+                        <div class="society-info">
+                            <div class="info-row">
+                                <span class="info-label">Units</span>
+                                <span class="info-value">${society.units || 0}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Members</span>
+                                <span class="info-value">${(JSON.parse(localStorage.getItem('societyMembers_' + society.id)) || []).length}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Created</span>
+                                <span class="info-value">${new Date(society.createdAt).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <div class="society-actions">
+                            <button class="action-btn primary" onclick="enterSociety('${society.id}')">Open</button>
+                            <button class="action-btn secondary" onclick="editSociety('${society.id}')">Edit</button>
+                            <button class="action-btn danger" onclick="deleteSociety('${society.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Display empty state
+        function displayEmptyState() {
+            const grid = document.getElementById('societiesGrid');
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1;">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏘️</div>
+                        <h2>No Societies Yet</h2>
+                        <p>Create your first society to get started with SocietyFlow</p>
+                        <button class="add-society-btn" onclick="openAddSocietyModal()">+ Create First Society</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update stats
+        function updateStats(societies) {
+            let totalMembers = 0;
+            societies.forEach(society => {
+                const members = JSON.parse(localStorage.getItem('societyMembers_' + society.id)) || [];
+                totalMembers += members.length;
+            });
+            document.getElementById('totalMembers').textContent = totalMembers;
+        }
+
+        // Modal functions
+        function openAddSocietyModal() {
+            document.getElementById('addSocietyModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Create new society
+        function createSociety() {
+            const name = document.getElementById('newSocietyName').value;
+            const units = document.getElementById('newSocietyUnits').value;
+            const city = document.getElementById('newSocietyCity').value;
+            const state = document.getElementById('newSocietyState').value;
+
+            if (!name || !units || !city || !state) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
+
+            const newSociety = {
+                id: Date.now().toString(),
+                userId: currentUser.id,
+                name: name,
+                units: parseInt(units),
+                city: city,
+                state: state,
+                createdAt: new Date().toISOString(),
+                googleSheetId: null,
+                dataLastSynced: null
+            };
+
+            societies.push(newSociety);
+            localStorage.setItem('allSocieties', JSON.stringify(societies));
+
+            // Initialize empty arrays for this society
+            localStorage.setItem('societyMembers_' + newSociety.id, JSON.stringify([]));
+            localStorage.setItem('societySettings_' + newSociety.id, JSON.stringify({}));
+
+            alert('Society created successfully!');
+            closeModal('addSocietyModal');
+            
+            // Reset form
+            document.getElementById('newSocietyName').value = '';
+            document.getElementById('newSocietyUnits').value = '';
+            document.getElementById('newSocietyCity').value = '';
+            document.getElementById('newSocietyState').value = '';
+
+            loadUserSocieties(currentUser.id);
+        }
+
+        // Enter society (open dashboard for that society)
+        function enterSociety(societyId) {
+            localStorage.setItem('currentSociety', societyId);
+            window.location.href = 'index.html';
+        }
+
+        // Edit society
+        function editSociety(societyId) {
+            alert('Edit functionality coming soon!');
+        }
+
+        // Delete society
+        function deleteSociety(societyId) {
+            if (confirm('Are you sure you want to delete this society? This action cannot be undone.')) {
+                const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
+                const updatedSocieties = societies.filter(s => s.id !== societyId);
+                localStorage.setItem('allSocieties', JSON.stringify(updatedSocieties));
+
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                loadUserSocieties(currentUser.id);
+            }
+        }
+
+        // Setup Google Sheets
+        function setupGoogleSheets() {
+            document.getElementById('googleSheetsModal').classList.add('active');
+        }
+
+        // Connect Google Sheets
+        function connectGoogleSheets() {
+            alert('🔵 Google Sheets Integration:\n\nTo fully implement:\n1. Set up Google OAuth 2.0\n2. Use Google Sheets API\n3. Create/update sheets programmatically\n4. Sync data bidirectionally\n\nFor now, you can manually create a Google Sheet and share the link.');
+            closeModal('googleSheetsModal');
+        }
+
+        // Logout
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('currentSociety');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Auto-hide Google Sheets setup after connecting
+        function hideGoogleSheetsSetup() {
+            document.getElementById('sheetsSetup').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
