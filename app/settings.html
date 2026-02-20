@@ -613,8 +613,9 @@
 
                 <div class="button-group">
                     <button class="btn btn-primary" onclick="saveGoogleSheetConfig()">Save Google Sheets Config</button>
+                    <button class="btn btn-secondary" onclick="testGoogleSheetWebhook()">Test Login Sync</button>
                 </div>
-                
+                <small>If test is successful, one row should be added to your Google Sheet.</small>
                 <h2 style="margin-top: 2rem;">Data Management</h2>
 
                 <div class="form-group">
@@ -737,9 +738,25 @@
             localStorage.setItem('societySettings', JSON.stringify(settings));
             showSuccessMessage();
         }
-            function saveGoogleSheetConfig() {
+
+        function isAppsScriptWebhook(url) {
+            return typeof url === 'string' && /script\.google\.com\/macros\/s\//.test(url);
+        }
+
+        function saveGoogleSheetConfig() {
             const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
             const webhookUrl = document.getElementById('sheetsWebhookUrl').value.trim();
+
+            if (spreadsheetUrl && !spreadsheetUrl.includes('docs.google.com/spreadsheets') && !isAppsScriptWebhook(spreadsheetUrl)) {
+                alert('Google Sheet Link must be a docs.google.com/spreadsheets URL (or leave it blank).');
+                return;
+            }
+
+            if (webhookUrl && !isAppsScriptWebhook(webhookUrl)) {
+                alert('Webhook must be a deployed Google Apps Script URL like: https://script.google.com/macros/s/.../exec');
+                return;
+            }
+
 
             localStorage.setItem('googleSpreadsheetUrl', spreadsheetUrl);
             localStorage.setItem('googleSheetsWebhookUrl', webhookUrl);
@@ -754,7 +771,35 @@
             showSuccessMessage();
         }
 
-    
+
+        function testGoogleSheetWebhook() {
+            const webhookUrl = document.getElementById('sheetsWebhookUrl').value.trim() || (window.getSocietyFlowWebhookUrl ? window.getSocietyFlowWebhookUrl() : '');
+
+            if (!webhookUrl || !isAppsScriptWebhook(webhookUrl)) {
+                alert('Please add a valid Google Apps Script Webhook URL first, then click Save Google Sheets Config.');
+                return;
+            }
+
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eventType: 'login_sync_test',
+                    timestamp: new Date().toISOString(),
+                    page: 'settings.html',
+                    details: {
+                        note: 'Manual test from Settings'
+                    }
+                })
+            })
+                .then(() => {
+                    alert('Test event sent. Check your Google Sheet for a new row (eventType = login_sync_test).');
+                })
+                .catch(() => {
+                    alert('Unable to reach webhook URL. Verify Apps Script deployment is public and URL is correct.');
+                });
+        }
+
         // Toggle settings
         function toggleSetting(element) {
             element.classList.toggle('active');
