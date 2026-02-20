@@ -587,7 +587,7 @@
             </div>
         </div>
     </div>
-
+    <script src="activity-tracker.js"></script>
     <script>
         // Load user data on page load
         window.addEventListener('load', function() {
@@ -788,12 +788,14 @@
             loadUserSocieties(currentUser.id);
         }
 
-        // Enter society (open dashboard for that society)
+          // Enter society (open dashboard for that society)
         function enterSociety(societyId) {
             localStorage.setItem('currentSociety', societyId);
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('society_open', { societyId: societyId });
+            }
             window.location.href = 'index.html';
         }
-
         // Edit society
         function editSociety(societyId) {
             alert('Edit functionality coming soon!');
