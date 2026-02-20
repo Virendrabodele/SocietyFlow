@@ -176,6 +176,48 @@
             box-shadow: var(--shadow);
         }
 
+         .bulk-import {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px dashed var(--border);
+        }
+
+        .bulk-import h3 {
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .helper-text {
+            font-size: 0.82rem;
+            color: var(--text-light);
+            margin-top: 0.35rem;
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            margin-top: 0.6rem;
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .bulk-textarea {
+            width: 100%;
+            min-height: 110px;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+
         /* Members Table Section */
         .table-section {
             background: var(--surface);
@@ -434,6 +476,22 @@
 
                     <button type="submit" class="btn btn-primary">Add Member</button>
                 </form>
+                <div class="bulk-import">
+                    <h3>Bulk Add Members (CSV / Excel)</h3>
+                    <div class="form-group">
+                        <label>Upload CSV File</label>
+                        <input type="file" id="bulkCsvFile" accept=".csv,.tsv,.txt,.xlsx,.xls">
+                        <p class="helper-text">Tip: Excel file should be saved as CSV before upload. Required columns: name, unit, type.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="importMembersFromFile()">Import from File</button>
+
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Or Paste Excel Rows</label>
+                        <textarea id="bulkPasteData" class="bulk-textarea" placeholder="Paste rows from Excel (tab-separated). First row can be header."></textarea>
+                        <p class="helper-text">Supported headers: name, phone, email, unit, type, bhk, sqft, status.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="importMembersFromPaste()">Import from Pasted Data</button>
+                </div>
             </div>
 
             <!-- Members Table -->
@@ -456,6 +514,131 @@
     <script>
         // Initialize members array from localStorage
         let members = JSON.parse(localStorage.getItem('societyMembers')) || [];
+        function normalizeType(type) {
+            const value = (type || '').toString().trim().toLowerCase();
+            if (value.includes('bhk')) return 'bhk';
+            if (value.includes('sqft') || value.includes('sq.')) return 'sqft';
+            if (value.includes('meter')) return 'metered';
+            return value;
+        }
+
+        function parseDelimitedLine(line, delimiter) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    const nextChar = line[i + 1];
+                    if (inQuotes && nextChar === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === delimiter && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current.trim());
+            return result;
+        }
+
+        function rowsToMembers(lines, delimiter) {
+            if (!lines.length) return { added: 0, skipped: 0 };
+
+            const firstRow = parseDelimitedLine(lines[0], delimiter).map(v => v.toLowerCase());
+            const hasHeader = firstRow.includes('name') || firstRow.includes('member name');
+            const startIndex = hasHeader ? 1 : 0;
+            const headers = hasHeader ? firstRow : ['name', 'phone', 'email', 'unit', 'type', 'bhk', 'sqft', 'status'];
+
+            let added = 0;
+            let skipped = 0;
+
+            for (let i = startIndex; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cols = parseDelimitedLine(line, delimiter);
+
+                const row = {};
+                headers.forEach((h, idx) => { row[h] = (cols[idx] || '').trim(); });
+
+                const memberName = row.name || row['member name'] || '';
+                const unit = row.unit || row['unit/flat number'] || '';
+                const type = normalizeType(row.type);
+
+                if (!memberName || !unit || !['bhk', 'sqft', 'metered'].includes(type)) {
+                    skipped++;
+                    continue;
+                }
+
+                members.push({
+                    id: Date.now() + i + Math.floor(Math.random() * 1000),
+                    name: memberName,
+                    phone: row.phone || '',
+                    email: row.email || '',
+                    unit: unit,
+                    type: type,
+                    bhk: row.bhk || '1',
+                    sqft: row.sqft || '',
+                    status: (row.status || 'active').toLowerCase(),
+                    joinDate: new Date().toLocaleDateString()
+                });
+                added++;
+            }
+
+            localStorage.setItem('societyMembers', JSON.stringify(members));
+            displayMembers();
+            updateStats();
+
+            return { added, skipped };
+        }
+
+        function importMembersFromFile() {
+            const fileInput = document.getElementById('bulkCsvFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please choose a CSV file first.');
+                return;
+            }
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'xlsx' || ext === 'xls') {
+                alert('Please save Excel as CSV, then upload. Or paste rows from Excel below.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result || '';
+                const delimiter = text.includes('	') ? '	' : ',';
+                const lines = text.split(/\r?\n/).filter(Boolean);
+                const result = rowsToMembers(lines, delimiter);
+                alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+                fileInput.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function importMembersFromPaste() {
+            const raw = document.getElementById('bulkPasteData').value.trim();
+            if (!raw) {
+                alert('Please paste data from Excel first.');
+                return;
+            }
+
+            const lines = raw.split(/\r?\n/).filter(Boolean);
+            const delimiter = lines[0].includes('	') ? '	' : ',';
+            const result = rowsToMembers(lines, delimiter);
+            alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+            document.getElementById('bulkPasteData').value = '';
+        }
+
 
         // Show/hide fields based on calculation type
         document.getElementById('calculationType').addEventListener('change', function(e) {
