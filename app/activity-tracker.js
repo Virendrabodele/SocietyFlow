@@ -30,9 +30,24 @@
         logs.push(payload);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(logs.slice(-1000)));
     }
+    function isAppsScriptUrl(url) {
+        return typeof url === 'string' && /script\.google\.com\/macros\/s\//.test(url);
+    }
+
+    function getWebhookUrl() {
+        const configuredWebhook = localStorage.getItem(WEBHOOK_KEY);
+        if (configuredWebhook) return configuredWebhook;
+
+        // Fallback: if user accidentally pasted Apps Script URL into spreadsheet field.
+        const spreadsheetUrl = localStorage.getItem(SPREADSHEET_KEY);
+        if (isAppsScriptUrl(spreadsheetUrl)) return spreadsheetUrl;
+
+        return '';
+    }
+
 
     function sendToWebhook(payload) {
-        const webhook = localStorage.getItem(WEBHOOK_KEY);
+        const webhook = getWebhookUrl();
         if (!webhook) return;
 
         fetch(webhook, {
@@ -72,6 +87,7 @@
     }
 
     window.recordSocietyFlowEvent = recordEvent;
+    window.getSocietyFlowWebhookUrl = getWebhookUrl;
 
     document.addEventListener('DOMContentLoaded', function () {
         trackPageView();
