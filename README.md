@@ -14,6 +14,7 @@ SocietyFlow/
 │   ├── maintenance.html         # Maintenance calculator
 │   ├── reports.html             # Report generation
 │   └── settings.html            # Configuration
+│   └── activity-tracker.js      # Logs updation
 │
 ├── documentation/               # Documentation (Read these first!)
 │   ├── 00_READ_ME_FIRST.md     # ← READ THIS FIRST - Complete guide
