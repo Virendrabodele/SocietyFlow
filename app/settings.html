@@ -349,6 +349,7 @@
             <a href="index.html" class="logo">SocietyFlow</a>
             <ul class="nav-links">
                 <li><a href="index.html">Home</a></li>
+                <li><a href="dashboard.html">Dashboard</a></li>
                 <li><a href="members.html">Members</a></li>
                 <li><a href="maintenance.html">Maintenance</a></li>
                 <li><a href="reports.html">Reports</a></li>
@@ -593,7 +594,27 @@
                         <div class="setting-toggle active" id="auditTrail" onclick="toggleSetting(this)"></div>
                     </div>
                 </div>
+                <h2 style="margin-top: 2rem;">Google Sheets Activity Sync</h2>
+                <div class="info-box">
+                    <p>Use a Google Apps Script Web App URL to capture login and page activity in your Google Sheet.</p>
+                </div>
 
+                <div class="form-group">
+                    <label>Google Sheet Link (Reference)</label>
+                    <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+                    <small>This is stored for reference in activity payloads.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Apps Script Webhook URL</label>
+                    <input type="url" id="sheetsWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
+                    <small>Required for automatic write to Google Sheets. The sheet edit URL alone cannot accept API POST calls.</small>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveGoogleSheetConfig()">Save Google Sheets Config</button>
+                </div>
+                
                 <h2 style="margin-top: 2rem;">Data Management</h2>
 
                 <div class="form-group">
@@ -617,7 +638,7 @@
             </div>
         </div>
     </div>
-
+    <script src="activity-tracker.js"></script>
     <script>
         // Load settings from localStorage
         function loadSettings() {
@@ -651,7 +672,12 @@
             document.getElementById('waterRate').value = settings.waterRate || '';
             document.getElementById('electricityRate').value = settings.electricityRate || '';
             document.getElementById('fixedCharges').value = settings.fixedCharges || '';
+            document.getElementById('spreadsheetUrl').value = localStorage.getItem('googleSpreadsheetUrl') || '';
+            document.getElementById('sheetsWebhookUrl').value = localStorage.getItem('googleSheetsWebhookUrl') || '';
         }
+
+
+        
 
         // Tab switching
         function switchTab(tabName) {
@@ -711,7 +737,24 @@
             localStorage.setItem('societySettings', JSON.stringify(settings));
             showSuccessMessage();
         }
+            function saveGoogleSheetConfig() {
+            const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
+            const webhookUrl = document.getElementById('sheetsWebhookUrl').value.trim();
 
+            localStorage.setItem('googleSpreadsheetUrl', spreadsheetUrl);
+            localStorage.setItem('googleSheetsWebhookUrl', webhookUrl);
+
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('google_sheet_config_updated', {
+                    hasSpreadsheetUrl: !!spreadsheetUrl,
+                    hasWebhookUrl: !!webhookUrl
+                });
+            }
+
+            showSuccessMessage();
+        }
+
+    
         // Toggle settings
         function toggleSetting(element) {
             element.classList.toggle('active');
