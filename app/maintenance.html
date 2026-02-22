@@ -343,9 +343,11 @@
             <a href="index.html" class="logo">SocietyFlow</a>
             <ul class="nav-links">
                 <li><a href="index.html">Home</a></li>
+                <li><a href="dashboard.html">Dashboard</a></li>
                 <li><a href="members.html">Members</a></li>
                 <li><a href="maintenance.html" class="active">Maintenance</a></li>
                 <li><a href="reports.html">Reports</a></li>
+                <li><a href="receipts.html">Receipts</a></li>
                 <li><a href="settings.html">Settings</a></li>
             </ul>
         </div>
@@ -356,6 +358,7 @@
         <div class="page-header">
             <h1>💰 Maintenance Calculator</h1>
             <p>Calculate maintenance charges based on BHK, SQFT, or meter readings</p>
+            <p style="color: var(--text-light); font-size: 0.9rem;">Bills are auto-saved and visible after refresh.</p>
         </div>
 
         <!-- Main Layout -->
@@ -494,9 +497,15 @@
         </div>
     </div>
 
+    <script src="activity-tracker.js"></script>
     <script>
         let calculationType = 'bhk';
-        let members = JSON.parse(localStorage.getItem('societyMembers')) || [];
+        const currentSociety = localStorage.getItem('currentSociety') || 'default';
+        const memberKey = 'societyMembers_' + currentSociety;
+        const invoiceKey = 'societyInvoices_' + currentSociety;
+
+        let members = JSON.parse(localStorage.getItem(memberKey)) || JSON.parse(localStorage.getItem('societyMembers')) || [];
+        let invoices = JSON.parse(localStorage.getItem(invoiceKey)) || [];
 
         // Change calculation type
         document.querySelectorAll('.type-btn').forEach(btn => {
@@ -565,6 +574,83 @@
             document.getElementById('finalTotal').textContent = '₹' + finalTotal.toFixed(2);
         }
 
+
+
+        function saveInvoices() {
+            localStorage.setItem(invoiceKey, JSON.stringify(invoices));
+        }
+
+        function getMemberContact(unit) {
+            const member = members.find(m => m.unit === unit);
+            return member ? { phone: member.phone || '', email: member.email || '' } : { phone: '', email: '' };
+        }
+
+        function openSms(unit, amount) {
+            const c = getMemberContact(unit);
+            if (!c.phone) {
+                alert('Phone number is missing for this member.');
+                return;
+            }
+            const msg = encodeURIComponent(`Society maintenance bill of ₹${amount.toFixed(2)} has been generated.`);
+            window.open(`sms:${c.phone}?body=${msg}`, '_blank');
+        }
+
+        function openEmail(unit, amount) {
+            const c = getMemberContact(unit);
+            if (!c.email) {
+                alert('Email is missing for this member.');
+                return;
+            }
+            const subject = encodeURIComponent('Maintenance Bill');
+            const body = encodeURIComponent(`Hello,\n\nYour maintenance bill amount is ₹${amount.toFixed(2)}.\n\nRegards,\nSociety Committee`);
+            window.open(`mailto:${c.email}?subject=${subject}&body=${body}`, '_blank');
+        }
+
+        function sendBill(type, invoiceId) {
+            const invoice = invoices.find(i => i.id === invoiceId);
+            if (!invoice) return;
+
+            if (type === 'sms') openSms(invoice.unit, invoice.total);
+            if (type === 'email') openEmail(invoice.unit, invoice.total);
+            if (type === 'both') {
+                openSms(invoice.unit, invoice.total);
+                openEmail(invoice.unit, invoice.total);
+            }
+
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('bill_sent', { type, invoiceId, unit: invoice.unit });
+            }
+        }
+
+        function addReceipt(invoiceId) {
+            const invoice = invoices.find(i => i.id === invoiceId);
+            if (!invoice) return;
+
+            const receiptNo = prompt('Enter receipt number:');
+            if (!receiptNo) return;
+            const paidDate = prompt('Enter paid date (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+            if (!paidDate) return;
+
+            invoice.paymentStatus = 'paid';
+            invoice.receiptNo = receiptNo;
+            invoice.paidDate = paidDate;
+            saveInvoices();
+
+            const totalCollection = invoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
+            displayMaintenanceTable(invoices, totalCollection);
+
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('receipt_added', { invoiceId, receiptNo, paidDate });
+            }
+        }
+
+        function loadSavedInvoices() {
+            if (!invoices.length) return;
+            const totalCollection = invoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
+            displayMaintenanceTable(invoices, totalCollection);
+        }
+
+
         // Calculate for all members
         function calculateMaintenance() {
             if (members.length === 0) {
@@ -597,17 +683,25 @@
                 const total = monthly + tax;
 
                 results.push({
+                    id: Date.now().toString() + '_' + member.unit,
                     name: member.name,
                     unit: member.unit,
                     base: baseAmount,
                     monthly: monthly,
                     tax: tax,
-                    total: total
+                    total: total,
+                    phone: member.phone || '',
+                    email: member.email || '',
+                    paymentStatus: 'pending',
+                    receiptNo: '',
+                    paidDate: ''
                 });
 
                 totalAmount += total;
             });
 
+            invoices = results;
+            saveInvoices();
             displayMaintenanceTable(results, totalAmount);
         }
 
@@ -622,6 +716,9 @@
                             <th>Monthly Charge</th>
                             <th>Tax</th>
                             <th>Total Amount</th>
+                            <th>Payment</th>
+                            <th>Receipt</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -636,6 +733,16 @@
                         <td>₹${result.monthly.toFixed(2)}</td>
                         <td>₹${result.tax.toFixed(2)}</td>
                         <td><strong>₹${result.total.toFixed(2)}</strong></td>
+                        <td>${result.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'}</td>
+                        <td>${result.receiptNo ? `${result.receiptNo} (${result.paidDate})` : '-'}</td>
+                        <td>
+                            <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+                                <button class="btn btn-secondary" style="width:auto; padding:0.35rem 0.55rem; margin-top:0;" onclick="sendBill('sms', '${result.id}')">SMS</button>
+                                <button class="btn btn-secondary" style="width:auto; padding:0.35rem 0.55rem; margin-top:0;" onclick="sendBill('email', '${result.id}')">Email</button>
+                                <button class="btn btn-secondary" style="width:auto; padding:0.35rem 0.55rem; margin-top:0;" onclick="sendBill('both', '${result.id}')">Both</button>
+                                <button class="btn btn-primary" style="width:auto; padding:0.35rem 0.55rem;" onclick="addReceipt('${result.id}')">Add Receipt</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
             });
@@ -669,6 +776,8 @@
             document.getElementById('additionalCharges').value = '';
             document.getElementById('taxRate').value = '18';
             document.getElementById('quickResults').style.display = 'none';
+            invoices = [];
+            saveInvoices();
             document.getElementById('maintenanceTable').innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">📊</div>
@@ -677,8 +786,21 @@
             `;
         }
 
+        loadSavedInvoices();
+
         function exportMaintenance() {
-            alert('Export functionality coming soon!');
+            if (!invoices.length) {
+                alert('No invoices to export.');
+                return;
+            }
+            const json = JSON.stringify(invoices, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `maintenance_invoices_${currentSociety}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>

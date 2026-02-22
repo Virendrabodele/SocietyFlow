@@ -544,6 +544,7 @@
         </div>
     </div>
 
+    <script src="activity-tracker.js"></script>
     <script>
         // Tab switching
         function switchTab(tabName) {
@@ -594,12 +595,18 @@
                 // Store logged-in user
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 localStorage.setItem('userLoginTime', new Date().toISOString());
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('login_success', { email: email });
+                }
                 
                 // Redirect after 1 second
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1000);
             } else {
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('login_failed', { email: email });
+                }
                 errorDiv.innerHTML = '❌ Invalid email or password';
                 errorDiv.style.display = 'block';
             }
@@ -676,6 +683,9 @@
             users.push(newUser);
             localStorage.setItem('societyUsers', JSON.stringify(users));
 
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('signup_success', { email: email, role: role });
+            }
             successDiv.innerHTML = '✓ Account created successfully! Redirecting to login...';
             successDiv.style.display = 'block';
 
@@ -746,6 +756,18 @@
                     googleSheetId: null,
                     isVerified: true,
                     role: 'resident' // ← RESIDENT ROLE
+                },
+                {
+                    id: 3,
+                    name: 'Master Dashboard',
+                    email: 'masterdashboard@societyflow',
+                    society: 'SocietyFlow Master',
+                    state: 'others',
+                    password: 'Master@123',
+                    createdAt: new Date().toISOString(),
+                    googleSheetId: null,
+                    isVerified: true,
+                    role: 'admin'
                 }
             ];
             localStorage.setItem('societyUsers', JSON.stringify(demoUsers));

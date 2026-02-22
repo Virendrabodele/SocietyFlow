@@ -111,6 +111,45 @@
             transform: translateY(-2px);
         }
 
+        .module-nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .module-links {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .module-link {
+            padding: 0.55rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .module-link.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .module-status {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
         /* Main Content */
         .container {
             max-width: 1400px;
@@ -449,6 +488,10 @@
                 gap: 0.75rem;
             }
 
+            .module-nav {
+                padding: 0.75rem 1rem;
+            }
+
             .page-header {
                 flex-direction: column;
                 gap: 1rem;
@@ -487,6 +530,19 @@
             <button class="logout-btn" onclick="handleLogout()">Logout</button>
         </div>
     </header>
+
+    <div class="module-nav">
+        <div class="module-links">
+            <button class="module-link active" type="button">Dashboard</button>
+            <button class="module-link" type="button" onclick="goToModule('index.html')">Home</button>
+            <button class="module-link" type="button" onclick="goToModule('members.html')">Members</button>
+            <button class="module-link" type="button" onclick="goToModule('maintenance.html')">Maintenance</button>
+            <button class="module-link" type="button" onclick="goToModule('reports.html')">Reports</button>
+            <button class="module-link" type="button" onclick="goToModule('receipts.html')">Receipts</button>
+            <button class="module-link" type="button" onclick="goToModule('settings.html')">Settings</button>
+        </div>
+        <div class="module-status" id="moduleStatus">Select and open a society to use modules.</div>
+    </div>
 
     <!-- Main Content -->
     <div class="container">
@@ -588,7 +644,19 @@
         </div>
     </div>
 
+    <script src="activity-tracker.js"></script>
     <script>
+        const MASTER_EMAILS = ['masterdashboard@societyflow', 'masterdashboard@societyflow.com'];
+
+        function isMasterUser(user) {
+            return !!(user && MASTER_EMAILS.includes((user.email || '').toLowerCase()));
+        }
+
+        function getVisibleSocieties(user) {
+            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
+            return isMasterUser(user) ? allSocieties : allSocieties.filter(s => s.userId === user.id);
+        }
+
         // Load user data on page load
         window.addEventListener('load', function() {
             const currentUser = localStorage.getItem('currentUser');
@@ -599,21 +667,18 @@
             }
 
             const user = JSON.parse(currentUser);
+            const masterUser = isMasterUser(user);
             document.getElementById('userName').textContent = user.name;
-            document.getElementById('userRole').textContent = user.role === 'admin' ? 'Admin' : 'Resident';
+            document.getElementById('userRole').textContent = user.role === 'resident' ? 'Resident' : (masterUser ? 'Master Admin' : 'Admin');
             document.getElementById('userEmail').textContent = user.email;
 
             // Apply role-based access
             if (user.role === 'resident') {
-                // Hide admin-only features
                 document.getElementById('addSocietyButton').style.display = 'none';
                 document.getElementById('sheetsSetup').style.display = 'none';
-                
-                // Show resident message
                 showResidentDashboard(user);
             } else {
-                // Show admin dashboard
-                loadUserSocieties(user.id);
+                loadUserSocieties(user);
             }
         });
 
@@ -643,6 +708,15 @@
             document.getElementById('dataSynced').textContent = 'N/A';
         }
 
+        function goToModule(page) {
+            const currentSociety = localStorage.getItem('currentSociety');
+            if (!currentSociety) {
+                alert('Please click Open on a society card first, then you can access all pages.');
+                return;
+            }
+            window.location.href = page;
+        }
+
         // Functions for resident access
         function viewPersonalInfo() {
             alert('Personal Information View - Coming Soon!\n\nYou can see your unit details and profile information here.');
@@ -652,20 +726,26 @@
             alert('My Maintenance View - Coming Soon!\n\nYou can see your monthly charges and payment status here.');
         }
 
-        // Load user societies (admin only)
-        function loadUserSocieties(userId) {
-            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
-            const userSocieties = allSocieties.filter(s => s.userId === userId);
+        // Load user societies (admin/master admin)
+        function loadUserSocieties(user) {
+            const visibleSocieties = getVisibleSocieties(user);
+            const addBtn = document.getElementById('addSocietyButton');
 
-            document.getElementById('totalSocieties').textContent = userSocieties.length;
+            document.getElementById('totalSocieties').textContent = visibleSocieties.length;
 
-            if (userSocieties.length === 0) {
-                displayEmptyState();
+            if (!isMasterUser(user) && visibleSocieties.length >= 1) {
+                addBtn.style.display = 'none';
+            } else {
+                addBtn.style.display = 'inline-block';
+            }
+
+            if (visibleSocieties.length === 0) {
+                displayEmptyState(user);
                 return;
             }
 
-            displaySocieties(userSocieties);
-            updateStats(userSocieties);
+            displaySocieties(visibleSocieties);
+            updateStats(visibleSocieties);
         }
 
         // Display societies
@@ -709,15 +789,15 @@
         }
 
         // Display empty state
-        function displayEmptyState() {
+        function displayEmptyState(user) {
             const grid = document.getElementById('societiesGrid');
             grid.innerHTML = `
                 <div style="grid-column: 1 / -1;">
                     <div class="empty-state">
                         <div class="empty-state-icon">🏘️</div>
                         <h2>No Societies Yet</h2>
-                        <p>Create your first society to get started with SocietyFlow</p>
-                        <button class="add-society-btn" onclick="openAddSocietyModal()">+ Create First Society</button>
+                        <p>${isMasterUser(user) ? 'Create a society for committee onboarding.' : 'Create your society dashboard to get started.'}</p>
+                        <button class="add-society-btn" onclick="openAddSocietyModal()">+ Create Society</button>
                     </div>
                 </div>
             `;
@@ -756,6 +836,16 @@
 
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
+            const masterUser = isMasterUser(currentUser);
+
+            if (!masterUser) {
+                const ownSocieties = societies.filter(s => s.userId === currentUser.id);
+                if (ownSocieties.length >= 1) {
+                    alert('Only Master Admin can create multiple societies. Your account supports one society only.');
+                    closeModal('addSocietyModal');
+                    return;
+                }
+            }
 
             const newSociety = {
                 id: Date.now().toString(),
@@ -785,12 +875,21 @@
             document.getElementById('newSocietyCity').value = '';
             document.getElementById('newSocietyState').value = '';
 
-            loadUserSocieties(currentUser.id);
+            loadUserSocieties(currentUser);
         }
 
         // Enter society (open dashboard for that society)
         function enterSociety(societyId) {
             localStorage.setItem('currentSociety', societyId);
+            const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
+            const selected = societies.find(s => s.id === societyId);
+            const status = document.getElementById('moduleStatus');
+            if (selected && status) {
+                status.textContent = `Selected society: ${selected.name}`;
+            }
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('society_open', { societyId: societyId });
+            }
             window.location.href = 'index.html';
         }
 
@@ -807,7 +906,7 @@
                 localStorage.setItem('allSocieties', JSON.stringify(updatedSocieties));
 
                 const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-                loadUserSocieties(currentUser.id);
+                loadUserSocieties(currentUser);
             }
         }
 
@@ -834,6 +933,16 @@
         // Auto-hide Google Sheets setup after connecting
         function hideGoogleSheetsSetup() {
             document.getElementById('sheetsSetup').style.display = 'none';
+        }
+
+        // Update selected society status
+        const selectedSocietyId = localStorage.getItem('currentSociety');
+        if (selectedSocietyId) {
+            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
+            const selectedSociety = allSocieties.find(s => s.id === selectedSocietyId);
+            if (selectedSociety) {
+                document.getElementById('moduleStatus').textContent = `Selected society: ${selectedSociety.name}`;
+            }
         }
     </script>
 </body>
