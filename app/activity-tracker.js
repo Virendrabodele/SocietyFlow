@@ -2,6 +2,7 @@
     const STORAGE_KEY = 'societyActivityLog';
     const WEBHOOK_KEY = 'googleSheetsWebhookUrl';
     const SPREADSHEET_KEY = 'googleSpreadsheetUrl';
+    const SPREADSHEET_KEY = 'https://docs.google.com/spreadsheets/d/1oNWJRk4QltrcKVvdI9HZ5stJMJ955mIvDh6mjhJ_jIQ/edit?gid=0#gid=0';
 
     function safeParse(value, fallback) {
         try { return JSON.parse(value); } catch (e) { return fallback; }
@@ -45,6 +46,7 @@
 
         return '';
     }
+
 
     function sendToWebhook(payload) {
         const webhook = getWebhookUrl();

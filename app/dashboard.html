@@ -110,6 +110,45 @@
             background: #dc2626;
             transform: translateY(-2px);
         }
+         .module-nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .module-links {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .module-link {
+            padding: 0.55rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .module-link.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .module-status {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
 
         .module-nav {
             background: var(--surface);
@@ -150,6 +189,9 @@
             font-size: 0.9rem;
         }
 
+
+
+        
         /* Main Content */
         .container {
             max-width: 1400px;
@@ -487,6 +529,9 @@
                 flex-direction: column;
                 gap: 0.75rem;
             }
+             .module-nav {
+                padding: 0.75rem 1rem;
+            }
 
             .module-nav {
                 padding: 0.75rem 1rem;
@@ -525,11 +570,23 @@
             <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg); border-radius: 6px;">
                 <span id="userRole" style="font-weight: 600; color: var(--primary);">Admin</span>
                 <span style="color: var(--text-light);">|</span>
-                <span id="userEmail" style="font-size: 0.9rem; color: var(--text-light);">user@example.com</span>
+                <span id="userEmail" style="font-size: 0.9rem; color: var(--text-light);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ef9a9c8a9daf8a978e829f838ac18c8082">[email&#160;protected]</a></span>
             </div>
             <button class="logout-btn" onclick="handleLogout()">Logout</button>
         </div>
     </header>
+ <div class="module-nav">
+        <div class="module-links">
+            <button class="module-link active" type="button">Dashboard</button>
+            <button class="module-link" type="button" onclick="goToModule('index.html')">Home</button>
+            <button class="module-link" type="button" onclick="goToModule('members.html')">Members</button>
+            <button class="module-link" type="button" onclick="goToModule('maintenance.html')">Maintenance</button>
+             <button class="module-link" type="button" onclick="goToModule('receipts.html')">Receipts</button>
+            <button class="module-link" type="button" onclick="goToModule('reports.html')">Reports</button>
+            <button class="module-link" type="button" onclick="goToModule('settings.html')">Settings</button>
+        </div>
+        <div class="module-status" id="moduleStatus">Select and open a society to use modules.</div>
+    </div>
 
     <div class="module-nav">
         <div class="module-links">
@@ -651,6 +708,12 @@
         function isMasterUser(user) {
             return !!(user && MASTER_EMAILS.includes((user.email || '').toLowerCase()));
         }
+    <script src="activity-tracker.js"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+    <script>
+        const MASTER_EMAILS = ['masterdashboard@societyflow', 'masterdashboard@societyflow.com'];
+        function isMasterUser(user) {
+            return !!(user && MASTER_EMAILS.includes((user.email || '').toLowerCase()));}
 
         function getVisibleSocieties(user) {
             const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
@@ -662,7 +725,9 @@
             const currentUser = localStorage.getItem('currentUser');
             
             if (!currentUser) {
-                window.location.href = 'login.html';
+                // For GitHub Pages, need to account for /SocietyFlow/ in URL
+                const basePath = window.location.pathname.includes('/SocietyFlow/') ? '/SocietyFlow/' : './';
+                window.location.href = basePath + 'app/login.html';
                 return;
             }
 
@@ -679,6 +744,10 @@
                 showResidentDashboard(user);
             } else {
                 loadUserSocieties(user);
+                
+                showResidentDashboard(user);
+            } else {
+                loadUserSocieties(user);            
             }
         });
 
@@ -707,6 +776,14 @@
             document.getElementById('totalMembers').textContent = 'N/A';
             document.getElementById('dataSynced').textContent = 'N/A';
         }
+             function goToModule(page) {
+            const currentSociety = localStorage.getItem('currentSociety');
+            if (!currentSociety) {
+                alert('Please click Open on a society card first, then you can access all pages.');
+                return;
+            }
+            window.location.href = page;
+        }
 
         function goToModule(page) {
             const currentSociety = localStorage.getItem('currentSociety');
@@ -727,6 +804,7 @@
         }
 
         // Load user societies (admin/master admin)
+// Load user societies (admin/master admin)
         function loadUserSocieties(user) {
             const visibleSocieties = getVisibleSocieties(user);
             const addBtn = document.getElementById('addSocietyButton');
@@ -739,6 +817,13 @@
                 addBtn.style.display = 'inline-block';
             }
 
+            
+           if (!isMasterUser(user) && visibleSocieties.length >= 1) {
+                addBtn.style.display = 'none';
+            } else {
+                addBtn.style.display = 'inline-block';
+            }
+
             if (visibleSocieties.length === 0) {
                 displayEmptyState(user);
                 return;
@@ -746,6 +831,7 @@
 
             displaySocieties(visibleSocieties);
             updateStats(visibleSocieties);
+
         }
 
         // Display societies
@@ -798,6 +884,9 @@
                         <h2>No Societies Yet</h2>
                         <p>${isMasterUser(user) ? 'Create a society for committee onboarding.' : 'Create your society dashboard to get started.'}</p>
                         <button class="add-society-btn" onclick="openAddSocietyModal()">+ Create Society</button>
+                       <p>${isMasterUser(user) ? 'Create a society for committee onboarding.' : 'Create your society dashboard to get started.'}</p>
+                        <button class="add-society-btn" onclick="openAddSocietyModal()">+ Create Society</button>
+
                     </div>
                 </div>
             `;
@@ -893,6 +982,7 @@
             window.location.href = 'index.html';
         }
 
+
         // Edit society
         function editSociety(societyId) {
             alert('Edit functionality coming soon!');
@@ -907,6 +997,7 @@
 
                 const currentUser = JSON.parse(localStorage.getItem('currentUser'));
                 loadUserSocieties(currentUser);
+               loadUserSocieties(currentUser);
             }
         }
 
@@ -926,11 +1017,11 @@
             if (confirm('Are you sure you want to logout?')) {
                 localStorage.removeItem('currentUser');
                 localStorage.removeItem('currentSociety');
-                window.location.href = 'login.html';
+                const basePath = window.location.pathname.includes('/SocietyFlow/') ? '/SocietyFlow/' : './';
+                window.location.href = basePath + 'app/login.html';
             }
         }
-
-        // Auto-hide Google Sheets setup after connecting
+ // Auto-hide Google Sheets setup after connecting
         function hideGoogleSheetsSetup() {
             document.getElementById('sheetsSetup').style.display = 'none';
         }

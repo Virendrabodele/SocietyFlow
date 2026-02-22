@@ -595,6 +595,16 @@
                         <div class="setting-toggle active" id="auditTrail" onclick="toggleSetting(this)"></div>
                     </div>
                 </div>
+                <h2 style="margin-top: 2rem;">Google Sheets Activity Sync</h2>
+                <div class="info-box">
+                    <p>Use a Google Apps Script Web App URL to capture login and page activity in your Google Sheet.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Google Sheet Link (Reference)</label>
+                    <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+                    <small>This is stored for reference in activity payloads.</small>
+                </div>
 
 
 
@@ -698,6 +708,9 @@
             document.getElementById('sheetsWebhookUrl').value = localStorage.getItem('googleSheetsWebhookUrl') || '';
         }
 
+
+        
+
         // Tab switching
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -776,6 +789,7 @@
                 return;
             }
 
+
             localStorage.setItem('googleSpreadsheetUrl', spreadsheetUrl);
             localStorage.setItem('googleSheetsWebhookUrl', webhookUrl);
 
@@ -788,6 +802,7 @@
 
             showSuccessMessage();
         }
+
 
         function testGoogleSheetWebhook() {
             const webhookUrl = document.getElementById('sheetsWebhookUrl').value.trim() || (window.getSocietyFlowWebhookUrl ? window.getSocietyFlowWebhookUrl() : '');
