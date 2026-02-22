@@ -644,7 +644,17 @@
         </div>
     </div>
     <script src="activity-tracker.js"></script>
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+    <script>
+        const MASTER_EMAILS = ['masterdashboard@societyflow', 'masterdashboard@societyflow.com'];
+        function isMasterUser(user) {
+            return !!(user && MASTER_EMAILS.includes((user.email || '').toLowerCase()));}
+
+        function getVisibleSocieties(user) {
+            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
+            return isMasterUser(user) ? allSocieties : allSocieties.filter(s => s.userId === user.id);
+        }
+
         // Load user data on page load
         window.addEventListener('load', function() {
             const currentUser = localStorage.getItem('currentUser');
@@ -657,21 +667,19 @@
             }
 
             const user = JSON.parse(currentUser);
+            const masterUser = isMasterUser(user);
             document.getElementById('userName').textContent = user.name;
-            document.getElementById('userRole').textContent = user.role === 'admin' ? 'Admin' : 'Resident';
+            document.getElementById('userRole').textContent = user.role === 'resident' ? 'Resident' : (masterUser ? 'Master Admin' : 'Admin');
             document.getElementById('userEmail').textContent = user.email;
 
             // Apply role-based access
             if (user.role === 'resident') {
-                // Hide admin-only features
                 document.getElementById('addSocietyButton').style.display = 'none';
                 document.getElementById('sheetsSetup').style.display = 'none';
                 
-                // Show resident message
                 showResidentDashboard(user);
             } else {
-                // Show admin dashboard
-                loadUserSocieties(user.id);
+                loadUserSocieties(user);            
             }
         });
 
@@ -718,20 +726,27 @@
             alert('My Maintenance View - Coming Soon!\n\nYou can see your monthly charges and payment status here.');
         }
 
-        // Load user societies (admin only)
-        function loadUserSocieties(userId) {
-            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
-            const userSocieties = allSocieties.filter(s => s.userId === userId);
+// Load user societies (admin/master admin)
+        function loadUserSocieties(user) {
+            const visibleSocieties = getVisibleSocieties(user);
+            const addBtn = document.getElementById('addSocietyButton');
 
-            document.getElementById('totalSocieties').textContent = userSocieties.length;
+            document.getElementById('totalSocieties').textContent = visibleSocieties.length;
+            
+           if (!isMasterUser(user) && visibleSocieties.length >= 1) {
+                addBtn.style.display = 'none';
+            } else {
+                addBtn.style.display = 'inline-block';
+            }
 
-            if (userSocieties.length === 0) {
-                displayEmptyState();
+            if (visibleSocieties.length === 0) {
+                displayEmptyState(user);
                 return;
             }
 
-            displaySocieties(userSocieties);
-            updateStats(userSocieties);
+            displaySocieties(visibleSocieties);
+            updateStats(visibleSocieties);
+
         }
 
         // Display societies
@@ -775,15 +790,16 @@
         }
 
         // Display empty state
-        function displayEmptyState() {
+        function displayEmptyState(user) {
             const grid = document.getElementById('societiesGrid');
             grid.innerHTML = `
                 <div style="grid-column: 1 / -1;">
                     <div class="empty-state">
                         <div class="empty-state-icon">🏘️</div>
                         <h2>No Societies Yet</h2>
-                        <p>Create your first society to get started with SocietyFlow</p>
-                        <button class="add-society-btn" onclick="openAddSocietyModal()">+ Create First Society</button>
+                       <p>${isMasterUser(user) ? 'Create a society for committee onboarding.' : 'Create your society dashboard to get started.'}</p>
+                        <button class="add-society-btn" onclick="openAddSocietyModal()">+ Create Society</button>
+
                     </div>
                 </div>
             `;
@@ -822,6 +838,16 @@
 
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
+            const masterUser = isMasterUser(currentUser);
+
+            if (!masterUser) {
+                const ownSocieties = societies.filter(s => s.userId === currentUser.id);
+                if (ownSocieties.length >= 1) {
+                    alert('Only Master Admin can create multiple societies. Your account supports one society only.');
+                    closeModal('addSocietyModal');
+                    return;
+                }
+            }
 
             const newSociety = {
                 id: Date.now().toString(),
@@ -851,7 +877,7 @@
             document.getElementById('newSocietyCity').value = '';
             document.getElementById('newSocietyState').value = '';
 
-            loadUserSocieties(currentUser.id);
+            loadUserSocieties(currentUser);
         }
 
         // Enter society (open dashboard for that society)
@@ -883,7 +909,7 @@
                 localStorage.setItem('allSocieties', JSON.stringify(updatedSocieties));
 
                 const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-                loadUserSocieties(currentUser.id);
+               loadUserSocieties(currentUser);
             }
         }
 
