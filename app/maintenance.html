@@ -415,6 +415,27 @@
                     <small>GST or other applicable tax</small>
                 </div>
 
+                <div class="form-group" style="border-top:1px dashed var(--border); padding-top:1rem;">
+                    <label style="font-weight:700; color:var(--primary);">Flexible Line Items</label>
+                    <small style="display:block; margin-bottom:0.6rem;">Create any number of components (maintenance, sinking fund, corpus, DG, water, etc).</small>
+                    <div style="display:grid; grid-template-columns: 1.2fr 1fr 0.8fr 1fr auto; gap:0.4rem; align-items:center;">
+                        <input type="text" id="itemName" placeholder="Line item name">
+                        <select id="itemBasis">
+                            <option value="flat">Flat amount</option>
+                            <option value="bhk">Per BHK</option>
+                            <option value="sqft">Per SQFT</option>
+                            <option value="waterReading">Per Water Reading</option>
+                            <option value="dgReading">Per DG Reading</option>
+                            <option value="meterReading">Per Meter Reading</option>
+                            <option value="custom">Per Custom Variable</option>
+                        </select>
+                        <input type="number" id="itemRate" placeholder="Rate" step="0.01">
+                        <input type="text" id="itemCustomKey" placeholder="custom key (if custom)">
+                        <button class="btn btn-secondary" type="button" onclick="addLineItem()" style="margin:0; width:auto;">Add</button>
+                    </div>
+                    <div id="lineItemsList" style="margin-top:0.7rem;"></div>
+                </div>
+
                 <div class="button-group">
                     <button class="btn btn-primary" onclick="calculateMaintenance()">Calculate</button>
                     <button class="btn btn-secondary" onclick="resetCalculator()">Reset</button>
@@ -503,6 +524,12 @@
         const currentSociety = localStorage.getItem('currentSociety') || 'default';
         const memberKey = 'societyMembers_' + currentSociety;
         const invoiceKey = 'societyInvoices_' + currentSociety;
+        const lineItemsKey = 'societyLineItems_' + currentSociety;
+
+        let members = JSON.parse(localStorage.getItem(memberKey)) || JSON.parse(localStorage.getItem('societyMembers')) || [];
+        let invoices = JSON.parse(localStorage.getItem(invoiceKey)) || [];
+        let lineItems = JSON.parse(localStorage.getItem(lineItemsKey)) || [];
+
 
         let members = JSON.parse(localStorage.getItem(memberKey)) || JSON.parse(localStorage.getItem('societyMembers')) || [];
         let invoices = JSON.parse(localStorage.getItem(invoiceKey)) || [];
@@ -578,6 +605,70 @@
 
         function saveInvoices() {
             localStorage.setItem(invoiceKey, JSON.stringify(invoices));
+        }
+
+        function saveLineItems() {
+            localStorage.setItem(lineItemsKey, JSON.stringify(lineItems));
+        }
+
+        function renderLineItems() {
+            const box = document.getElementById('lineItemsList');
+            if (!lineItems.length) {
+                box.innerHTML = '<small style="color: var(--text-light);">No custom line items added. Default method will be used.</small>';
+                return;
+            }
+            box.innerHTML = lineItems.map((item, idx) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; margin-bottom:0.35rem;">
+                    <span><strong>${item.name}</strong> | ${item.basis} | rate ₹${Number(item.rate || 0).toFixed(2)} ${item.customKey ? `| key:${item.customKey}` : ''}</span>
+                    <button class="btn btn-secondary" style="width:auto; margin:0; padding:0.25rem 0.5rem;" onclick="removeLineItem(${idx})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function addLineItem() {
+            const name = document.getElementById('itemName').value.trim();
+            const basis = document.getElementById('itemBasis').value;
+            const rate = Number(document.getElementById('itemRate').value || 0);
+            const customKey = document.getElementById('itemCustomKey').value.trim();
+
+            if (!name || !rate) {
+                alert('Line item name and rate are required.');
+                return;
+            }
+            if (basis === 'custom' && !customKey) {
+                alert('Custom basis requires custom key (example: sinking_fund_share).');
+                return;
+            }
+
+            lineItems.push({ name, basis, rate, customKey });
+            saveLineItems();
+            renderLineItems();
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemRate').value = '';
+            document.getElementById('itemCustomKey').value = '';
+        }
+
+        function removeLineItem(index) {
+            lineItems.splice(index, 1);
+            saveLineItems();
+            renderLineItems();
+        }
+
+        function calculateFromLineItems(member) {
+            let baseAmount = 0;
+            lineItems.forEach(item => {
+                const rate = Number(item.rate || 0);
+                let units = 0;
+                if (item.basis === 'flat') units = 1;
+                if (item.basis === 'bhk') units = Number(member.bhk || 0);
+                if (item.basis === 'sqft') units = Number(member.sqft || 0);
+                if (item.basis === 'waterReading') units = Number(member.waterReading || 0);
+                if (item.basis === 'dgReading') units = Number(member.dgReading || 0);
+                if (item.basis === 'meterReading') units = Number(member.meterReading || 0);
+                if (item.basis === 'custom') units = Number((member.customVariables || {})[item.customKey] || 0);
+                baseAmount += units * rate;
+            });
+            return baseAmount;
         }
 
         function getMemberContact(unit) {
@@ -667,15 +758,17 @@
             members.forEach(member => {
                 let baseAmount = 0;
 
-                if (member.type === 'bhk' && calculationType === 'bhk') {
+                if (lineItems.length > 0) {
+                    baseAmount = calculateFromLineItems(member);
+                } else if (calculationType === 'bhk') {
                     const rate = parseFloat(document.getElementById('bhkRate').value) || 0;
-                    baseAmount = member.bhk * rate;
-                } else if (member.type === 'sqft' && calculationType === 'sqft') {
+                    baseAmount = Number(member.bhk || 0) * rate;
+                } else if (calculationType === 'sqft') {
                     const rate = parseFloat(document.getElementById('sqftRate').value) || 0;
-                    baseAmount = member.sqft * rate;
-                } else if (member.type === 'metered' && calculationType === 'metered') {
+                    baseAmount = Number(member.sqft || 0) * rate;
+                } else if (calculationType === 'metered') {
                     const rate = parseFloat(document.getElementById('meteredRate').value) || 0;
-                    baseAmount = 100 * rate; // default 100 units
+                    baseAmount = Number(member.meterReading || 100) * rate;
                 }
 
                 const monthly = baseAmount + additional;
@@ -786,6 +879,7 @@
             `;
         }
 
+        renderLineItems();
         loadSavedInvoices();
 
         function exportMaintenance() {

@@ -189,6 +189,45 @@
             font-size: 0.9rem;
         }
 
+        .module-nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .module-links {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .module-link {
+            padding: 0.55rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .module-link.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .module-status {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
 
 
         
@@ -537,6 +576,10 @@
                 padding: 0.75rem 1rem;
             }
 
+            .module-nav {
+                padding: 0.75rem 1rem;
+            }
+
             .page-header {
                 flex-direction: column;
                 gap: 1rem;
@@ -583,6 +626,19 @@
             <button class="module-link" type="button" onclick="goToModule('maintenance.html')">Maintenance</button>
              <button class="module-link" type="button" onclick="goToModule('receipts.html')">Receipts</button>
             <button class="module-link" type="button" onclick="goToModule('reports.html')">Reports</button>
+            <button class="module-link" type="button" onclick="goToModule('settings.html')">Settings</button>
+        </div>
+        <div class="module-status" id="moduleStatus">Select and open a society to use modules.</div>
+    </div>
+
+    <div class="module-nav">
+        <div class="module-links">
+            <button class="module-link active" type="button">Dashboard</button>
+            <button class="module-link" type="button" onclick="goToModule('index.html')">Home</button>
+            <button class="module-link" type="button" onclick="goToModule('members.html')">Members</button>
+            <button class="module-link" type="button" onclick="goToModule('maintenance.html')">Maintenance</button>
+            <button class="module-link" type="button" onclick="goToModule('reports.html')">Reports</button>
+            <button class="module-link" type="button" onclick="goToModule('receipts.html')">Receipts</button>
             <button class="module-link" type="button" onclick="goToModule('settings.html')">Settings</button>
         </div>
         <div class="module-status" id="moduleStatus">Select and open a society to use modules.</div>
@@ -744,6 +800,9 @@
                 showResidentDashboard(user);
             } else {
                 loadUserSocieties(user);
+                showResidentDashboard(user);
+            } else {
+                loadUserSocieties(user);
                 
                 showResidentDashboard(user);
             } else {
@@ -794,6 +853,15 @@
             window.location.href = page;
         }
 
+        function goToModule(page) {
+            const currentSociety = localStorage.getItem('currentSociety');
+            if (!currentSociety) {
+                alert('Please click Open on a society card first, then you can access all pages.');
+                return;
+            }
+            window.location.href = page;
+        }
+
         // Functions for resident access
         function viewPersonalInfo() {
             alert('Personal Information View - Coming Soon!\n\nYou can see your unit details and profile information here.');
@@ -810,6 +878,13 @@
             const addBtn = document.getElementById('addSocietyButton');
 
             document.getElementById('totalSocieties').textContent = visibleSocieties.length;
+
+            if (!isMasterUser(user) && visibleSocieties.length >= 1) {
+                addBtn.style.display = 'none';
+            } else {
+                addBtn.style.display = 'inline-block';
+            }
+
 
             if (!isMasterUser(user) && visibleSocieties.length >= 1) {
                 addBtn.style.display = 'none';
