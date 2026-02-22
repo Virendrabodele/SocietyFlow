@@ -2,9 +2,9 @@
     const STORAGE_KEY = 'societyActivityLog';
     const WEBHOOK_KEY = 'googleSheetsWebhookUrl';
     const SPREADSHEET_KEY = 'googleSpreadsheetUrl';
-    const SPREADSHEET_KEY = 'https://docs.google.com/spreadsheets/d/1oNWJRk4QltrcKVvdI9HZ5stJMJ955mIvDh6mjhJ_jIQ/edit?gid=0#gid=0';
 
     function safeParse(value, fallback) {
+        if (!value) return fallback;
         try { return JSON.parse(value); } catch (e) { return fallback; }
     }
 
@@ -27,7 +27,7 @@
     }
 
     function persistActivity(payload) {
-        const logs = safeParse(localStorage.getItem(STORAGE_KEY), []);
+        const logs = safeParse(localStorage.getItem(STORAGE_KEY), []) || [];
         logs.push(payload);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(logs.slice(-1000)));
     }
@@ -50,7 +50,13 @@
 
     function sendToWebhook(payload) {
         const webhook = getWebhookUrl();
-        if (!webhook) return;
+        if (!webhook) {
+            console.log('[ActivityTracker] No webhook URL configured');
+            return;
+        }
+
+        console.log('[ActivityTracker] Sending to webhook:', webhook);
+        console.log('[ActivityTracker] Payload:', payload);
 
         fetch(webhook, {
             method: 'POST',
@@ -58,8 +64,13 @@
             body: JSON.stringify(payload),
             keepalive: true,
             mode: 'cors'
-        }).catch(() => {
-            // Ignore network errors so UI flow never breaks.
+        }).then(r => {
+            console.log('[ActivityTracker] Webhook response status:', r.status);
+            return r.text();
+        }).then(text => {
+            console.log('[ActivityTracker] Webhook response:', text);
+        }).catch(e => {
+            console.log('[ActivityTracker] Webhook error:', e.message);
         });
     }
 
