@@ -496,3 +496,57 @@ async function readMembersFromSheet(sheetId) {
 
 *Version 2.0 - Multi-User & Google Sheets Support*
 *Last Updated: February 2024*
+
+---
+
+## 🧾 Activity Logging (Login + Page Clicks)
+
+> Important: A Google Sheet edit URL (like `docs.google.com/spreadsheets/.../edit`) cannot directly receive POST requests from your app.
+> You need a Google Apps Script **Web App URL** as a webhook.
+
+### Recommended Flow
+
+1. Keep your spreadsheet link in Settings (for reference).
+2. Deploy a Google Apps Script Web App tied to that sheet.
+3. Paste the Apps Script URL in **Settings → System → Google Sheets Activity Sync**.
+4. SocietyFlow sends events like `login_success`, `page_view`, and `nav_click` to that webhook.
+
+### Minimal Google Apps Script
+
+```javascript
+function doPost(e) {
+  const sheet = SpreadsheetApp.openById('1oNWJRk4QltrcKVvdI9HZ5stJMJ955mIvDh6mjhJ_jIQ').getSheetByName('Sheet1');
+  const payload = JSON.parse(e.postData.contents || '{}');
+
+  sheet.appendRow([
+    new Date(),
+    payload.eventType || '',
+    payload.userEmail || '',
+    payload.userRole || '',
+    payload.page || '',
+    JSON.stringify(payload.details || {})
+  ]);
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+```
+
+Deploy with:
+- **Execute as:** Me
+- **Who has access:** Anyone
+
+This is the simplest alternative to building a full backend.
+
+### Why login is not updating in your sheet
+
+If your app has only the spreadsheet link (like `docs.google.com/spreadsheets/.../edit`) and no Apps Script webhook, rows will **not** be inserted automatically.
+
+You must configure **Settings → System → Apps Script Webhook URL** with your deployed Script URL (ending with `/exec`).
+
+Quick check:
+1. Save webhook URL in Settings
+2. Click **Test Login Sync**
+3. Confirm one row appears with `eventType = login_sync_test`
+4. Then login again and check rows with `eventType = login_success`
