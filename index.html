@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SocietyFlow - Professional Society Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            text-align: center;
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .logo { font-size: 4rem; margin-bottom: 1rem; }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: #1e40af;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tagline {
+            font-size: 1.1rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+        
+        .features {
+            text-align: left;
+            margin: 2rem 0;
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 6px;
+        }
+        
+        .feature-icon { font-size: 1.5rem; }
+        .feature-text { text-align: left; color: #374151; }
+        
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.85rem 2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #1e40af 0%, #06b6d4 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(30, 64, 175, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f8fafc;
+            color: #1e40af;
+            border: 2px solid #1e40af;
+        }
+        
+        .btn-secondary:hover {
+            background: #1e40af;
+            color: white;
+        }
+        
+        .demo-accounts {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 2rem;
+            text-align: left;
+            color: #92400e;
+            font-size: 0.9rem;
+        }
+        
+        .demo-accounts h3 {
+            margin-bottom: 0.75rem;
+            color: #b45309;
+        }
+        
+        .demo-accounts p {
+            margin: 0.5rem 0;
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .version {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            margin-top: 2rem;
+        }
+        
+        @media (max-width: 600px) {
+            .container { padding: 2rem; }
+            h1 { font-size: 2rem; }
+            .logo { font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏘️</div>
+        
+        <h1>SocietyFlow</h1>
+        <p class="tagline">Professional Society Management System v2.1</p>
+        
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">👥</span>
+                <span class="feature-text">Multi-User & Multi-Society Support</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">🔐</span>
+                <span class="feature-text">Role-Based Access (Admin & Resident)</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">💰</span>
+                <span class="feature-text">Flexible Maintenance Calculator</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">📊</span>
+                <span class="feature-text">Custom Report Generation</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">🔵</span>
+                <span class="feature-text">Google Sheets Integration Ready</span>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <a href="./app/login.html" class="btn btn-primary">📱 Open Application</a>
+            <a href="./documentation/00_READ_ME_FIRST.md" class="btn btn-secondary">📖 Documentation</a>
+        </div>
+        
+        <div class="demo-accounts">
+            <h3>🔓 Demo Credentials</h3>
+            <p><strong>Admin Account:</strong><br>demo@society.com / Demo@123</p>
+            <p><strong>Resident Account:</strong><br>resident@society.com / Demo@123</p>
+        </div>
+        
+        <div class="version">
+            <p>SocietyFlow v2.1 - Role-Based Access Control</p>
+            <p>Ready for production • Fully documented • Mobile responsive</p>
+        </div>
+    </div>
+</body>
+</html>

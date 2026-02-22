@@ -546,6 +546,18 @@
 
     <script src="activity-tracker.js"></script>
     <script>
+        // ═══════════════════════════════════════════════════════════════
+        // HELPER FUNCTION: Get correct base path for GitHub Pages
+        // ═══════════════════════════════════════════════════════════════
+        function getBasePath() {
+            // If running on GitHub Pages, path includes /SocietyFlow/
+            if (window.location.pathname.includes('/SocietyFlow/')) {
+                return '/SocietyFlow/';
+            }
+            // If running locally, use relative path
+            return './';
+        }
+
         // Tab switching
         function switchTab(tabName) {
             document.querySelectorAll('.form-content').forEach(tab => tab.classList.remove('active'));
@@ -561,7 +573,9 @@
             field.type = field.type === 'password' ? 'text' : 'password';
         }
 
-        // Login Handler
+        // ═══════════════════════════════════════════════════════════════
+        // LOGIN HANDLER - With GitHub Pages path fix
+        // ═══════════════════════════════════════════════════════════════
         function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
@@ -599,9 +613,10 @@
                     window.recordSocietyFlowEvent('login_success', { email: email });
                 }
                 
-                // Redirect after 1 second
+                // Redirect after 1 second with correct path
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    const basePath = getBasePath();
+                    window.location.href = basePath + 'app/dashboard.html';
                 }, 1000);
             } else {
                 if (window.recordSocietyFlowEvent) {
@@ -612,7 +627,9 @@
             }
         }
 
-        // Signup Handler
+        // ═══════════════════════════════════════════════════════════════
+        // SIGNUP HANDLER - With role support
+        // ═══════════════════════════════════════════════════════════════
         function handleSignup() {
             const name = document.getElementById('signupName').value;
             const email = document.getElementById('signupEmail').value;
@@ -673,11 +690,11 @@
                 email: email,
                 society: society,
                 state: state,
-                password: password, // NOTE: In production, this should be hashed!
+                password: password,
                 createdAt: new Date().toISOString(),
                 googleSheetId: null,
                 isVerified: false,
-                role: role // ← ROLE ADDED HERE
+                role: role
             };
 
             users.push(newUser);
@@ -716,16 +733,21 @@
             alert('Password reset email would be sent to your registered email.\n\nNote: Email functionality requires backend setup.');
         }
 
-        // Check if user is already logged in
+        // ═══════════════════════════════════════════════════════════════
+        // CHECK IF ALREADY LOGGED IN - With GitHub Pages path fix
+        // ═══════════════════════════════════════════════════════════════
         window.addEventListener('load', function() {
             const currentUser = localStorage.getItem('currentUser');
             if (currentUser) {
                 // Redirect to dashboard if already logged in
-                // window.location.href = 'dashboard.html';
+                const basePath = getBasePath();
+                window.location.href = basePath + 'app/dashboard.html';
             }
         });
 
-        // Demo login credentials
+        // ═══════════════════════════════════════════════════════════════
+        // DEMO CREDENTIALS - Create on first load
+        // ═══════════════════════════════════════════════════════════════
         console.log('Demo Credentials:');
         console.log('Email: demo@society.com');
         console.log('Password: Demo@123');
@@ -743,7 +765,7 @@
                     createdAt: new Date().toISOString(),
                     googleSheetId: null,
                     isVerified: true,
-                    role: 'admin' // ← ROLE ADDED
+                    role: 'admin'
                 },
                 {
                     id: 2,
@@ -761,6 +783,12 @@
                     id: 3,
                     name: 'Master Dashboard',
                     email: 'masterdashboard@societyflow',
+                    role: 'resident'
+                },
+                 {
+                    id: 3,
+                    name: 'Master Dashboard',
+                    email: 'masterdashboard@societyflow.com',
                     society: 'SocietyFlow Master',
                     state: 'others',
                     password: 'Master@123',
@@ -773,5 +801,6 @@
             localStorage.setItem('societyUsers', JSON.stringify(demoUsers));
         }
     </script>
+    <script src="activity-tracker.js"></script>
 </body>
 </html>

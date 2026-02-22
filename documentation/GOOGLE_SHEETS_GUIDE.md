@@ -500,6 +500,7 @@ async function readMembersFromSheet(sheetId) {
 ---
 
 ## 🧾 Activity Logging (Login + Page Clicks)
+# 🧾 Activity Logging (Login + Page Clicks)
 
 > Important: A Google Sheet edit URL (like `docs.google.com/spreadsheets/.../edit`) cannot directly receive POST requests from your app.
 > You need a Google Apps Script **Web App URL** as a webhook.

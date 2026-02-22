@@ -531,6 +531,9 @@
         let lineItems = JSON.parse(localStorage.getItem(lineItemsKey)) || [];
 
 
+        let members = JSON.parse(localStorage.getItem(memberKey)) || JSON.parse(localStorage.getItem('societyMembers')) || [];
+        let invoices = JSON.parse(localStorage.getItem(invoiceKey)) || [];
+
         // Change calculation type
         document.querySelectorAll('.type-btn').forEach(btn => {
             btn.addEventListener('click', function() {
