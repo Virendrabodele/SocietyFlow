@@ -309,6 +309,106 @@
             border-color: var(--primary);
         }
 
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            border-bottom: 2px solid var(--border);
+            background: var(--bg);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 1.25rem;
+            border: none;
+            background: transparent;
+            color: var(--text-light);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn:hover {
+            background: var(--surface);
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            background: var(--surface);
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modal improvements */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .modal-footer button {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
         @media (max-width: 768px) {
             .main-layout {
                 grid-template-columns: 1fr;
@@ -324,6 +424,15 @@
 
             .button-group {
                 flex-direction: column;
+            }
+
+            .tab-nav {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                border-bottom: 1px solid var(--border);
+                border-right: none;
             }
 
             table {
@@ -356,481 +465,611 @@
     <!-- Main Content -->
     <div class="container">
         <div class="page-header">
-            <h1>💰 Maintenance Calculator</h1>
-            <p>Calculate maintenance charges based on BHK, SQFT, or meter readings</p>
-            <p style="color: var(--text-light); font-size: 0.9rem;">Bills are auto-saved and visible after refresh.</p>
+            <h1>💰 Maintenance Management</h1>
+            <p>Configure billing line items, set rates, and generate maintenance bills</p>
         </div>
 
-        <!-- Main Layout -->
-        <div class="main-layout">
-            <!-- Calculator Configuration -->
-            <div class="card">
-                <h2>Setup Calculation</h2>
+        <!-- Tab Navigation -->
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="lineItems" onclick="switchTab('lineItems')">
+                    📋 Line Items Management
+                </button>
+                <button class="tab-btn" data-tab="rateConfig" onclick="switchTab('rateConfig')">
+                    ⚙️ Rate Configuration
+                </button>
+                <button class="tab-btn" data-tab="billCalc" onclick="switchTab('billCalc')">
+                    🧮 Calculate Bills
+                </button>
+            </div>
 
-                <div class="form-group">
-                    <label>Select Calculation Method *</label>
-                    <div class="calc-type-selector">
-                        <button class="type-btn active" data-type="bhk">BHK Based</button>
-                        <button class="type-btn" data-type="sqft">SQFT Based</button>
-                        <button class="type-btn" data-type="metered">Metered (Usage)</button>
+            <!-- Tab 1: Line Items Management -->
+            <div class="tab-content active" id="lineItems">
+                <div style="padding: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 style="margin: 0; color: var(--primary);">Billing Line Items</h2>
+                        <button class="btn btn-primary" onclick="openLineItemModal()">+ Add Line Item</button>
                     </div>
-                </div>
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+                        Create billing components like Maintenance, Water, Sinking Fund, etc. Each line item can have its own calculation method.
+                    </p>
 
-                <div id="bhkConfig">
-                    <h3 style="margin: 1.5rem 0 1rem; color: var(--text);">BHK Configuration</h3>
-                    <div class="form-group">
-                        <label>Monthly Charge per BHK *</label>
-                        <input type="number" id="bhkRate" placeholder="e.g., 500" step="0.01">
-                        <small>Enter amount in ₹</small>
+                    <div id="lineItemsTable">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>No line items yet. Add your first billing component to get started.</p>
+                        </div>
                     </div>
-                </div>
-
-                <div id="sqftConfig" style="display: none;">
-                    <h3 style="margin: 1.5rem 0 1rem; color: var(--text);">SQFT Configuration</h3>
-                    <div class="form-group">
-                        <label>Rate per SQFT *</label>
-                        <input type="number" id="sqftRate" placeholder="e.g., 5" step="0.01">
-                        <small>Enter amount in ₹ per sqft</small>
-                    </div>
-                </div>
-
-                <div id="meteredConfig" style="display: none;">
-                    <h3 style="margin: 1.5rem 0 1rem; color: var(--text);">Metered Configuration</h3>
-                    <div class="form-group">
-                        <label>Rate per Unit *</label>
-                        <input type="number" id="meteredRate" placeholder="e.g., 50" step="0.01">
-                        <small>Enter amount in ₹ per unit (water/electricity)</small>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Additional Charges (Optional)</label>
-                    <input type="number" id="additionalCharges" placeholder="e.g., 100" step="0.01">
-                    <small>One-time or monthly additional charges</small>
-                </div>
-
-                <div class="form-group">
-                    <label>Tax/GST Rate (%)</label>
-                    <input type="number" id="taxRate" value="18" placeholder="e.g., 18" step="0.01">
-                    <small>GST or other applicable tax</small>
-                </div>
-
-                <div class="form-group" style="border-top:1px dashed var(--border); padding-top:1rem;">
-                    <label style="font-weight:700; color:var(--primary);">Flexible Line Items</label>
-                    <small style="display:block; margin-bottom:0.6rem;">Create any number of components (maintenance, sinking fund, corpus, DG, water, etc).</small>
-                    <div style="display:grid; grid-template-columns: 1.2fr 1fr 0.8fr 1fr auto; gap:0.4rem; align-items:center;">
-                        <input type="text" id="itemName" placeholder="Line item name">
-                        <select id="itemBasis">
-                            <option value="flat">Flat amount</option>
-                            <option value="bhk">Per BHK</option>
-                            <option value="sqft">Per SQFT</option>
-                            <option value="waterReading">Per Water Reading</option>
-                            <option value="dgReading">Per DG Reading</option>
-                            <option value="meterReading">Per Meter Reading</option>
-                            <option value="custom">Per Custom Variable</option>
-                        </select>
-                        <input type="number" id="itemRate" placeholder="Rate" step="0.01">
-                        <input type="text" id="itemCustomKey" placeholder="custom key (if custom)">
-                        <button class="btn btn-secondary" type="button" onclick="addLineItem()" style="margin:0; width:auto;">Add</button>
-                    </div>
-                    <div id="lineItemsList" style="margin-top:0.7rem;"></div>
-                </div>
-
-                <div class="button-group">
-                    <button class="btn btn-primary" onclick="calculateMaintenance()">Calculate</button>
-                    <button class="btn btn-secondary" onclick="resetCalculator()">Reset</button>
                 </div>
             </div>
 
-            <!-- Quick Calculator -->
-            <div class="card">
-                <h2>Quick Calculate</h2>
+            <!-- Tab 2: Rate Configuration -->
+            <div class="tab-content" id="rateConfig" style="display: none;">
+                <div style="padding: 2rem;">
+                    <h2 style="margin: 0 0 1rem 0; color: var(--primary);">Rate Configuration</h2>
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+                        Select a line item to configure its calculation rates and rules.
+                    </p>
 
-                <div id="quickCalcBHK">
                     <div class="form-group">
-                        <label>Select BHK Type *</label>
-                        <select id="quickBhk">
-                            <option value="">Choose BHK</option>
-                            <option value="1">1 BHK</option>
-                            <option value="2">2 BHK</option>
-                            <option value="3">3 BHK</option>
-                            <option value="4">4 BHK</option>
-                            <option value="5">5+ BHK</option>
+                        <label>Select Line Item *</label>
+                        <select id="selectedLineItem" onchange="loadRateConfig()">
+                            <option value="">Choose a line item</option>
                         </select>
                     </div>
-                </div>
 
-                <div id="quickCalcSqft" style="display: none;">
-                    <div class="form-group">
-                        <label>Enter SQFT *</label>
-                        <input type="number" id="quickSqft" placeholder="Enter area in sqft">
+                    <div id="rateConfigContent">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⚙️</div>
+                            <p>Select a line item above to configure its rates</p>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div id="quickCalcMetered" style="display: none;">
-                    <div class="form-group">
-                        <label>Enter Units Used *</label>
-                        <input type="number" id="quickMetered" placeholder="Enter units">
-                    </div>
-                </div>
+            <!-- Tab 3: Calculate Bills -->
+            <div class="tab-content" id="billCalc" style="display: none;">
+                <div style="padding: 2rem;">
+                    <h2 style="margin: 0 0 1rem 0; color: var(--primary);">Generate Bills</h2>
 
-                <div class="form-group">
-                    <label>Number of Months</label>
-                    <input type="number" id="months" value="1" min="1">
-                </div>
+                    <div class="form-group" style="max-width: 400px;">
+                        <label>Billing Period *</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <select id="billMonth">
+                                <option value="01">January</option>
+                                <option value="02">February</option>
+                                <option value="03">March</option>
+                                <option value="04">April</option>
+                                <option value="05">May</option>
+                                <option value="06">June</option>
+                                <option value="07">July</option>
+                                <option value="08">August</option>
+                                <option value="09">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <select id="billYear">
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+                    </div>
 
-                <button class="btn btn-primary" onclick="quickCalculate()" style="width: 100%; margin-top: 1rem;">Calculate Quick</button>
+                    <button class="btn btn-primary" onclick="generateBills()" style="margin-top: 1rem;">Generate Bills for All Members</button>
 
-                <!-- Results -->
-                <div class="results-grid" id="quickResults" style="display: none;">
-                    <div class="result-card">
-                        <h3>Monthly Charge</h3>
-                        <div class="amount" id="monthlyAmount">₹0</div>
-                    </div>
-                    <div class="result-card">
-                        <h3>Total with Tax</h3>
-                        <div class="amount" id="totalWithTax">₹0</div>
-                    </div>
-                    <div class="result-card">
-                        <h3>Tax Amount</h3>
-                        <div class="amount" id="taxAmount">₹0</div>
-                    </div>
-                    <div class="result-card">
-                        <h3>Final Total</h3>
-                        <div class="amount" id="finalTotal">₹0</div>
+                    <div id="billsTable" style="margin-top: 2rem;">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>Click "Generate Bills" to calculate maintenance for all members</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Bulk Calculation Results -->
-        <div class="card table-section">
-            <div class="table-header">
-                <h2>All Members Maintenance</h2>
-                <button class="btn btn-secondary" onclick="exportMaintenance()" style="width: 150px;">Export</button>
-            </div>
-            <div id="maintenanceTable">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📊</div>
-                    <p>Calculate maintenance to see results for all members.</p>
+    <!-- Add Line Item Modal -->
+    <div class="modal" id="lineItemModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">Add New Line Item</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Line Item Name *</label>
+                    <input type="text" id="lineItemName" placeholder="e.g., Maintenance, Water Charges, Sinking Fund">
+                    <small>Enter a descriptive name for this billing component</small>
                 </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="lineItemDesc" placeholder="Optional description" style="min-height: 60px; resize: vertical;"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Calculation Type *</label>
+                    <select id="lineItemCalcType">
+                        <option value="">Select calculation method</option>
+                        <option value="flexible">Flexible (Multiple rates based on conditions)</option>
+                        <option value="fixed">Fixed (Same amount for all)</option>
+                        <option value="per_bhk">Per BHK (Different rate per BHK)</option>
+                        <option value="per_sqft">Per SQFT (Rate per square foot)</option>
+                    </select>
+                    <small>How this charge will be calculated</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Status</label>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="lineItemStatus" checked style="width: auto;">
+                        <label for="lineItemStatus" style="margin: 0;">Active (uncheck to deactivate)</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button style="background: var(--danger); color: white;" onclick="closeModal('lineItemModal')">Cancel</button>
+                <button style="background: var(--primary); color: white;" onclick="saveLineItem()">Save Line Item</button>
             </div>
         </div>
     </div>
 
     <script src="activity-tracker.js"></script>
     <script>
-        let calculationType = 'bhk';
         const currentSociety = localStorage.getItem('currentSociety') || 'default';
         const memberKey = 'societyMembers_' + currentSociety;
-        const invoiceKey = 'societyInvoices_' + currentSociety;
-        const lineItemsKey = 'societyLineItems_' + currentSociety;
+        const lineItemsKey = 'maintenanceLineItems_' + currentSociety;
+        const billsKey = 'maintenanceBills_' + currentSociety;
 
-        let members = JSON.parse(localStorage.getItem(memberKey)) || JSON.parse(localStorage.getItem('societyMembers')) || [];
-        let invoices = JSON.parse(localStorage.getItem(invoiceKey)) || [];
-        let lineItems = JSON.parse(localStorage.getItem(lineItemsKey)) || [];
+        let members = JSON.parse(localStorage.getItem(memberKey)) || [];
+        let lineItemsList = JSON.parse(localStorage.getItem(lineItemsKey)) || [];
+        let bills = JSON.parse(localStorage.getItem(billsKey)) || [];
 
-        // Change calculation type
-        document.querySelectorAll('.type-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                calculationType = this.dataset.type;
+        // Initialize on load
+        window.addEventListener('load', function() {
+            const currentMonth = new Date().getMonth() + 1;
+            const currentYear = new Date().getFullYear();
+            document.getElementById('billMonth').value = String(currentMonth).padStart(2, '0');
+            document.getElementById('billYear').value = currentYear;
 
-                document.getElementById('bhkConfig').style.display = calculationType === 'bhk' ? 'block' : 'none';
-                document.getElementById('sqftConfig').style.display = calculationType === 'sqft' ? 'block' : 'none';
-                document.getElementById('meteredConfig').style.display = calculationType === 'metered' ? 'block' : 'none';
-
-                document.getElementById('quickCalcBHK').style.display = calculationType === 'bhk' ? 'block' : 'none';
-                document.getElementById('quickCalcSqft').style.display = calculationType === 'sqft' ? 'block' : 'none';
-                document.getElementById('quickCalcMetered').style.display = calculationType === 'metered' ? 'block' : 'none';
-            });
+            displayLineItems();
+            populateLineItemDropdown();
         });
 
-        // Quick Calculate
-        function quickCalculate() {
-            let baseAmount = 0;
-            let units = 0;
-
-            if (calculationType === 'bhk') {
-                const bhk = document.getElementById('quickBhk').value;
-                const rate = parseFloat(document.getElementById('bhkRate').value) || 0;
-                if (!bhk || !rate) {
-                    alert('Please select BHK and set rate');
-                    return;
-                }
-                baseAmount = bhk * rate;
-                units = bhk;
-            } else if (calculationType === 'sqft') {
-                const sqft = parseFloat(document.getElementById('quickSqft').value);
-                const rate = parseFloat(document.getElementById('sqftRate').value) || 0;
-                if (!sqft || !rate) {
-                    alert('Please enter SQFT and set rate');
-                    return;
-                }
-                baseAmount = sqft * rate;
-                units = sqft;
-            } else if (calculationType === 'metered') {
-                const metered = parseFloat(document.getElementById('quickMetered').value);
-                const rate = parseFloat(document.getElementById('meteredRate').value) || 0;
-                if (!metered || !rate) {
-                    alert('Please enter units and set rate');
-                    return;
-                }
-                baseAmount = metered * rate;
-                units = metered;
-            }
-
-            const months = parseInt(document.getElementById('months').value) || 1;
-            const additional = parseFloat(document.getElementById('additionalCharges').value) || 0;
-            const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
-
-            const monthly = baseAmount + additional;
-            const total = monthly * months;
-            const tax = (total * taxRate) / 100;
-            const finalTotal = total + tax;
-
-            document.getElementById('quickResults').style.display = 'grid';
-            document.getElementById('monthlyAmount').textContent = '₹' + monthly.toFixed(2);
-            document.getElementById('totalWithTax').textContent = '₹' + total.toFixed(2);
-            document.getElementById('taxAmount').textContent = '₹' + tax.toFixed(2);
-            document.getElementById('finalTotal').textContent = '₹' + finalTotal.toFixed(2);
-        }
-
-
-
-        function saveInvoices() {
-            localStorage.setItem(invoiceKey, JSON.stringify(invoices));
-        }
-
-        function saveLineItems() {
-            localStorage.setItem(lineItemsKey, JSON.stringify(lineItems));
-        }
-
-        function renderLineItems() {
-            const box = document.getElementById('lineItemsList');
-            if (!lineItems.length) {
-                box.innerHTML = '<small style="color: var(--text-light);">No custom line items added. Default method will be used.</small>';
-                return;
-            }
-            box.innerHTML = lineItems.map((item, idx) => `
-                <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; margin-bottom:0.35rem;">
-                    <span><strong>${item.name}</strong> | ${item.basis} | rate ₹${Number(item.rate || 0).toFixed(2)} ${item.customKey ? `| key:${item.customKey}` : ''}</span>
-                    <button class="btn btn-secondary" style="width:auto; margin:0; padding:0.25rem 0.5rem;" onclick="removeLineItem(${idx})">Remove</button>
-                </div>
-            `).join('');
-        }
-
-        function addLineItem() {
-            const name = document.getElementById('itemName').value.trim();
-            const basis = document.getElementById('itemBasis').value;
-            const rate = Number(document.getElementById('itemRate').value || 0);
-            const customKey = document.getElementById('itemCustomKey').value.trim();
-
-            if (!name || !rate) {
-                alert('Line item name and rate are required.');
-                return;
-            }
-            if (basis === 'custom' && !customKey) {
-                alert('Custom basis requires custom key (example: sinking_fund_share).');
-                return;
-            }
-
-            lineItems.push({ name, basis, rate, customKey });
-            saveLineItems();
-            renderLineItems();
-            document.getElementById('itemName').value = '';
-            document.getElementById('itemRate').value = '';
-            document.getElementById('itemCustomKey').value = '';
-        }
-
-        function removeLineItem(index) {
-            lineItems.splice(index, 1);
-            saveLineItems();
-            renderLineItems();
-        }
-
-        function calculateFromLineItems(member) {
-            let baseAmount = 0;
-            lineItems.forEach(item => {
-                const rate = Number(item.rate || 0);
-                let units = 0;
-                if (item.basis === 'flat') units = 1;
-                if (item.basis === 'bhk') units = Number(member.bhk || 0);
-                if (item.basis === 'sqft') units = Number(member.sqft || 0);
-                if (item.basis === 'waterReading') units = Number(member.waterReading || 0);
-                if (item.basis === 'dgReading') units = Number(member.dgReading || 0);
-                if (item.basis === 'meterReading') units = Number(member.meterReading || 0);
-                if (item.basis === 'custom') units = Number((member.customVariables || {})[item.customKey] || 0);
-                baseAmount += units * rate;
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
             });
-            return baseAmount;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
         }
 
-        function getMemberContact(unit) {
-            const member = members.find(m => m.unit === unit);
-            return member ? { phone: member.phone || '', email: member.email || '' } : { phone: '', email: '' };
+        // Modal functions
+        function openLineItemModal() {
+            document.getElementById('lineItemModal').classList.add('active');
         }
 
-        function openSms(unit, amount) {
-            const c = getMemberContact(unit);
-            if (!c.phone) {
-                alert('Phone number is missing for this member.');
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            // Reset form
+            if (modalId === 'lineItemModal') {
+                document.getElementById('lineItemName').value = '';
+                document.getElementById('lineItemDesc').value = '';
+                document.getElementById('lineItemCalcType').value = '';
+                document.getElementById('lineItemStatus').checked = true;
+            }
+        }
+
+        // Save line item
+        function saveLineItem() {
+            const name = document.getElementById('lineItemName').value.trim();
+            const description = document.getElementById('lineItemDesc').value.trim();
+            const calculationType = document.getElementById('lineItemCalcType').value;
+            const status = document.getElementById('lineItemStatus').checked ? 'active' : 'inactive';
+
+            // Validation
+            if (!name) {
+                alert('❌ Line item name is required');
                 return;
             }
-            const msg = encodeURIComponent(`Society maintenance bill of ₹${amount.toFixed(2)} has been generated.`);
-            window.open(`sms:${c.phone}?body=${msg}`, '_blank');
-        }
 
-        function openEmail(unit, amount) {
-            const c = getMemberContact(unit);
-            if (!c.email) {
-                alert('Email is missing for this member.');
+            if (name.length < 3 || name.length > 50) {
+                alert('❌ Name must be between 3 and 50 characters');
                 return;
             }
-            const subject = encodeURIComponent('Maintenance Bill');
-            const body = encodeURIComponent(`Hello,\n\nYour maintenance bill amount is ₹${amount.toFixed(2)}.\n\nRegards,\nSociety Committee`);
-            window.open(`mailto:${c.email}?subject=${subject}&body=${body}`, '_blank');
-        }
 
-        function sendBill(type, invoiceId) {
-            const invoice = invoices.find(i => i.id === invoiceId);
-            if (!invoice) return;
-
-            if (type === 'sms') openSms(invoice.unit, invoice.total);
-            if (type === 'email') openEmail(invoice.unit, invoice.total);
-            if (type === 'both') {
-                openSms(invoice.unit, invoice.total);
-                openEmail(invoice.unit, invoice.total);
+            if (!calculationType) {
+                alert('❌ Please select a calculation type');
+                return;
             }
+
+            const newLineItem = {
+                id: Date.now().toString(),
+                name: name,
+                description: description,
+                calculationType: calculationType,
+                status: status,
+                configuration: {},
+                createdAt: new Date().toISOString()
+            };
+
+            lineItemsList.push(newLineItem);
+            localStorage.setItem(lineItemsKey, JSON.stringify(lineItemsList));
 
             if (window.recordSocietyFlowEvent) {
-                window.recordSocietyFlowEvent('bill_sent', { type, invoiceId, unit: invoice.unit });
-            }
-        }
-
-        function addReceipt(invoiceId) {
-            const invoice = invoices.find(i => i.id === invoiceId);
-            if (!invoice) return;
-
-            const receiptNo = prompt('Enter receipt number:');
-            if (!receiptNo) return;
-            const paidDate = prompt('Enter paid date (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
-            if (!paidDate) return;
-
-            invoice.paymentStatus = 'paid';
-            invoice.receiptNo = receiptNo;
-            invoice.paidDate = paidDate;
-            saveInvoices();
-
-            const totalCollection = invoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
-            displayMaintenanceTable(invoices, totalCollection);
-
-            if (window.recordSocietyFlowEvent) {
-                window.recordSocietyFlowEvent('receipt_added', { invoiceId, receiptNo, paidDate });
-            }
-        }
-
-        function loadSavedInvoices() {
-            if (!invoices.length) return;
-            const totalCollection = invoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
-            displayMaintenanceTable(invoices, totalCollection);
-        }
-
-
-        // Calculate for all members
-        function calculateMaintenance() {
-            if (members.length === 0) {
-                alert('Please add members first!');
-                return;
-            }
-
-            const additional = parseFloat(document.getElementById('additionalCharges').value) || 0;
-            const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
-
-            let results = [];
-            let totalAmount = 0;
-
-            members.forEach(member => {
-                let baseAmount = 0;
-
-                if (lineItems.length > 0) {
-                    baseAmount = calculateFromLineItems(member);
-                } else if (calculationType === 'bhk') {
-                    const rate = parseFloat(document.getElementById('bhkRate').value) || 0;
-                    baseAmount = Number(member.bhk || 0) * rate;
-                } else if (calculationType === 'sqft') {
-                    const rate = parseFloat(document.getElementById('sqftRate').value) || 0;
-                    baseAmount = Number(member.sqft || 0) * rate;
-                } else if (calculationType === 'metered') {
-                    const rate = parseFloat(document.getElementById('meteredRate').value) || 0;
-                    baseAmount = Number(member.meterReading || 100) * rate;
-                }
-
-                const monthly = baseAmount + additional;
-                const tax = (monthly * taxRate) / 100;
-                const total = monthly + tax;
-
-                results.push({
-                    id: Date.now().toString() + '_' + member.unit,
-                    name: member.name,
-                    unit: member.unit,
-                    base: baseAmount,
-                    monthly: monthly,
-                    tax: tax,
-                    total: total,
-                    phone: member.phone || '',
-                    email: member.email || '',
-                    paymentStatus: 'pending',
-                    receiptNo: '',
-                    paidDate: ''
+                window.recordSocietyFlowEvent('line_item_created', {
+                    lineItemId: newLineItem.id,
+                    name: name,
+                    type: calculationType
                 });
+            }
 
-                totalAmount += total;
-            });
-
-            invoices = results;
-            saveInvoices();
-            displayMaintenanceTable(results, totalAmount);
+            closeModal('lineItemModal');
+            displayLineItems();
+            populateLineItemDropdown();
+            alert('✓ Line item created successfully! Configure rates in the Rate Configuration tab.');
         }
 
-        function displayMaintenanceTable(results, total) {
+        // Display line items
+        function displayLineItems() {
+            const container = document.getElementById('lineItemsTable');
+
+            if (lineItemsList.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <p>No line items yet. Add your first billing component to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+
             let html = `
                 <table>
                     <thead>
                         <tr>
-                            <th>Member Name</th>
-                            <th>Unit</th>
-                            <th>Base Amount</th>
-                            <th>Monthly Charge</th>
-                            <th>Tax</th>
-                            <th>Total Amount</th>
-                            <th>Payment</th>
-                            <th>Receipt</th>
+                            <th>Line Item Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Created</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
 
-            results.forEach(result => {
+            lineItemsList.forEach(item => {
+                const typeLabels = {
+                    'flexible': 'Flexible',
+                    'fixed': 'Fixed',
+                    'per_bhk': 'Per BHK',
+                    'per_sqft': 'Per SQFT'
+                };
+
                 html += `
                     <tr>
-                        <td>${result.name}</td>
-                        <td>${result.unit}</td>
-                        <td>₹${result.base.toFixed(2)}</td>
-                        <td>₹${result.monthly.toFixed(2)}</td>
-                        <td>₹${result.tax.toFixed(2)}</td>
-                        <td><strong>₹${result.total.toFixed(2)}</strong></td>
-                        <td>${result.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'}</td>
-                        <td>${result.receiptNo ? `${result.receiptNo} (${result.paidDate})` : '-'}</td>
+                        <td><strong>${item.name}</strong><br><small style="color: var(--text-light);">${item.description || 'No description'}</small></td>
+                        <td>${typeLabels[item.calculationType] || item.calculationType}</td>
+                        <td>${item.status === 'active' ? '✅ Active' : '⏸️ Inactive'}</td>
+                        <td>${new Date(item.createdAt).toLocaleDateString()}</td>
                         <td>
-                            <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
-                                <button class="btn btn-secondary" style="width:auto; padding:0.35rem 0.55rem; margin-top:0;" onclick="sendBill('sms', '${result.id}')">SMS</button>
-                                <button class="btn btn-secondary" style="width:auto; padding:0.35rem 0.55rem; margin-top:0;" onclick="sendBill('email', '${result.id}')">Email</button>
-                                <button class="btn btn-secondary" style="width:auto; padding:0.35rem 0.55rem; margin-top:0;" onclick="sendBill('both', '${result.id}')">Both</button>
-                                <button class="btn btn-primary" style="width:auto; padding:0.35rem 0.55rem;" onclick="addReceipt('${result.id}')">Add Receipt</button>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" onclick="editLineItem('${item.id}')" style="width: auto; padding: 0.5rem 0.75rem;">Edit</button>
+                                <button class="btn btn-secondary" onclick="deleteLineItem('${item.id}')" style="width: auto; padding: 0.5rem 0.75rem; background: var(--danger);">Delete</button>
                             </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        // Delete line item
+        function deleteLineItem(id) {
+            if (!confirm('Are you sure you want to delete this line item?')) return;
+
+            lineItemsList = lineItemsList.filter(item => item.id !== id);
+            localStorage.setItem(lineItemsKey, JSON.stringify(lineItemsList));
+            displayLineItems();
+            populateLineItemDropdown();
+            alert('✓ Line item deleted');
+        }
+
+        // Edit line item
+        function editLineItem(id) {
+            alert('Edit functionality: Navigate to Rate Configuration tab to configure rates for this line item.');
+            switchTab('rateConfig');
+            populateLineItemDropdown();
+        }
+
+        // Populate line item dropdown
+        function populateLineItemDropdown() {
+            const dropdown = document.getElementById('selectedLineItem');
+            dropdown.innerHTML = '<option value="">Choose a line item</option>';
+
+            lineItemsList.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.name;
+                dropdown.appendChild(option);
+            });
+        }
+
+        // Load rate configuration
+        function loadRateConfig() {
+            const lineItemId = document.getElementById('selectedLineItem').value;
+            const container = document.getElementById('rateConfigContent');
+
+            if (!lineItemId) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚙️</div>
+                        <p>Select a line item above to configure its rates</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const lineItem = lineItemsList.find(item => item.id === lineItemId);
+            if (!lineItem) return;
+
+            let configHtml = `
+                <div style="background: var(--bg); padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem;">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">${lineItem.name}</h3>
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem;">Type: ${lineItem.calculationType}</p>
+            `;
+
+            // Different configurations based on type
+            if (lineItem.calculationType === 'fixed') {
+                configHtml += `
+                    <div class="form-group">
+                        <label>Fixed Amount (₹) *</label>
+                        <input type="number" id="fixedAmount" value="${lineItem.configuration.fixedAmount || ''}" placeholder="e.g., 5000" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Tax/GST (%)</label>
+                        <input type="number" id="taxPercent" value="${lineItem.configuration.taxPercent || 0}" placeholder="e.g., 18" step="0.01">
+                    </div>
+                `;
+            } else if (lineItem.calculationType === 'per_bhk') {
+                configHtml += `
+                    <div class="form-group">
+                        <label>Rate per BHK (₹/month) *</label>
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem; align-items: center;">
+                            <span>1 BHK:</span>
+                            <input type="number" id="bhk1Rate" value="${lineItem.configuration.bhk1Rate || ''}" placeholder="2000" step="0.01">
+                            <span>2 BHK:</span>
+                            <input type="number" id="bhk2Rate" value="${lineItem.configuration.bhk2Rate || ''}" placeholder="3000" step="0.01">
+                            <span>3 BHK:</span>
+                            <input type="number" id="bhk3Rate" value="${lineItem.configuration.bhk3Rate || ''}" placeholder="4000" step="0.01">
+                            <span>4 BHK:</span>
+                            <input type="number" id="bhk4Rate" value="${lineItem.configuration.bhk4Rate || ''}" placeholder="5000" step="0.01">
+                            <span>5+ BHK:</span>
+                            <input type="number" id="bhk5Rate" value="${lineItem.configuration.bhk5Rate || ''}" placeholder="6000" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tax/GST (%)</label>
+                        <input type="number" id="taxPercent" value="${lineItem.configuration.taxPercent || 0}" placeholder="e.g., 18" step="0.01">
+                    </div>
+                `;
+            } else if (lineItem.calculationType === 'per_sqft') {
+                configHtml += `
+                    <div class="form-group">
+                        <label>Rate per SQFT (₹/sqft/month) *</label>
+                        <input type="number" id="sqftRate" value="${lineItem.configuration.sqftRate || ''}" placeholder="e.g., 5" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Tax/GST (%)</label>
+                        <input type="number" id="taxPercent" value="${lineItem.configuration.taxPercent || 0}" placeholder="e.g., 18" step="0.01">
+                    </div>
+                `;
+            } else if (lineItem.calculationType === 'flexible') {
+                configHtml += `
+                    <p style="color: var(--text-light); margin-bottom: 1rem;">Configure multiple rate components:</p>
+                    <div class="form-group">
+                        <label>Per BHK Rate (Optional)</label>
+                        <input type="number" id="perBhkRate" value="${lineItem.configuration.perBhkRate || ''}" placeholder="e.g., 500 per BHK" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Per SQFT Rate (Optional)</label>
+                        <input type="number" id="perSqftRate" value="${lineItem.configuration.perSqftRate || ''}" placeholder="e.g., 2 per SQFT" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Fixed Component (Optional)</label>
+                        <input type="number" id="fixedComponent" value="${lineItem.configuration.fixedComponent || ''}" placeholder="e.g., 1000 flat" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Tax/GST (%)</label>
+                        <input type="number" id="taxPercent" value="${lineItem.configuration.taxPercent || 0}" placeholder="e.g., 18" step="0.01">
+                    </div>
+                `;
+            }
+
+            configHtml += `
+                    <button class="btn btn-primary" onclick="saveRateConfig('${lineItemId}')" style="width: 100%; margin-top: 1rem;">Save Configuration</button>
+                </div>
+            `;
+
+            container.innerHTML = configHtml;
+        }
+
+        // Save rate configuration
+        function saveRateConfig(lineItemId) {
+            const lineItem = lineItemsList.find(item => item.id === lineItemId);
+            if (!lineItem) return;
+
+            const config = {};
+
+            if (lineItem.calculationType === 'fixed') {
+                config.fixedAmount = parseFloat(document.getElementById('fixedAmount').value) || 0;
+                config.taxPercent = parseFloat(document.getElementById('taxPercent').value) || 0;
+            } else if (lineItem.calculationType === 'per_bhk') {
+                config.bhk1Rate = parseFloat(document.getElementById('bhk1Rate').value) || 0;
+                config.bhk2Rate = parseFloat(document.getElementById('bhk2Rate').value) || 0;
+                config.bhk3Rate = parseFloat(document.getElementById('bhk3Rate').value) || 0;
+                config.bhk4Rate = parseFloat(document.getElementById('bhk4Rate').value) || 0;
+                config.bhk5Rate = parseFloat(document.getElementById('bhk5Rate').value) || 0;
+                config.taxPercent = parseFloat(document.getElementById('taxPercent').value) || 0;
+            } else if (lineItem.calculationType === 'per_sqft') {
+                config.sqftRate = parseFloat(document.getElementById('sqftRate').value) || 0;
+                config.taxPercent = parseFloat(document.getElementById('taxPercent').value) || 0;
+            } else if (lineItem.calculationType === 'flexible') {
+                config.perBhkRate = parseFloat(document.getElementById('perBhkRate').value) || 0;
+                config.perSqftRate = parseFloat(document.getElementById('perSqftRate').value) || 0;
+                config.fixedComponent = parseFloat(document.getElementById('fixedComponent').value) || 0;
+                config.taxPercent = parseFloat(document.getElementById('taxPercent').value) || 0;
+            }
+
+            lineItem.configuration = config;
+            lineItem.updatedAt = new Date().toISOString();
+
+            localStorage.setItem(lineItemsKey, JSON.stringify(lineItemsList));
+            alert('✓ Rate configuration saved successfully!');
+
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('rate_config_saved', {
+                    lineItemId: lineItemId,
+                    name: lineItem.name
+                });
+            }
+        }
+
+        // Generate bills
+        function generateBills() {
+            if (members.length === 0) {
+                alert('❌ No members found. Please add members first.');
+                return;
+            }
+
+            if (lineItemsList.filter(item => item.status === 'active').length === 0) {
+                alert('❌ No active line items found. Please create and configure line items first.');
+                return;
+            }
+
+            const month = document.getElementById('billMonth').value;
+            const year = document.getElementById('billYear').value;
+            const period = `${year}-${month}`;
+
+            const generatedBills = [];
+            let totalCollection = 0;
+
+            members.forEach(member => {
+                const memberBills = [];
+                let memberTotal = 0;
+
+                // Calculate for each active line item
+                lineItemsList.filter(item => item.status === 'active').forEach(lineItem => {
+                    let baseAmount = 0;
+
+                    if (lineItem.calculationType === 'fixed') {
+                        baseAmount = lineItem.configuration.fixedAmount || 0;
+                    } else if (lineItem.calculationType === 'per_bhk') {
+                        const bhk = parseInt(member.bhk) || 0;
+                        if (bhk === 1) baseAmount = lineItem.configuration.bhk1Rate || 0;
+                        else if (bhk === 2) baseAmount = lineItem.configuration.bhk2Rate || 0;
+                        else if (bhk === 3) baseAmount = lineItem.configuration.bhk3Rate || 0;
+                        else if (bhk === 4) baseAmount = lineItem.configuration.bhk4Rate || 0;
+                        else if (bhk >= 5) baseAmount = lineItem.configuration.bhk5Rate || 0;
+                    } else if (lineItem.calculationType === 'per_sqft') {
+                        const sqft = parseFloat(member.sqft) || 0;
+                        const rate = lineItem.configuration.sqftRate || 0;
+                        baseAmount = sqft * rate;
+                    } else if (lineItem.calculationType === 'flexible') {
+                        const bhk = parseInt(member.bhk) || 0;
+                        const sqft = parseFloat(member.sqft) || 0;
+                        baseAmount += bhk * (lineItem.configuration.perBhkRate || 0);
+                        baseAmount += sqft * (lineItem.configuration.perSqftRate || 0);
+                        baseAmount += lineItem.configuration.fixedComponent || 0;
+                    }
+
+                    const taxPercent = lineItem.configuration.taxPercent || 0;
+                    const tax = (baseAmount * taxPercent) / 100;
+                    const total = baseAmount + tax;
+
+                    memberBills.push({
+                        lineItemName: lineItem.name,
+                        baseAmount: baseAmount,
+                        tax: tax,
+                        total: total
+                    });
+
+                    memberTotal += total;
+                });
+
+                generatedBills.push({
+                    id: Date.now().toString() + '_' + member.unit,
+                    memberId: member.id,
+                    memberName: member.name,
+                    unit: member.unit,
+                    period: period,
+                    lineItems: memberBills,
+                    totalBill: memberTotal,
+                    amountPaid: 0,
+                    outstanding: memberTotal,
+                    status: 'pending',
+                    generatedAt: new Date().toISOString()
+                });
+
+                totalCollection += memberTotal;
+            });
+
+            bills = generatedBills;
+            localStorage.setItem(billsKey, JSON.stringify(bills));
+
+            displayBills(generatedBills, totalCollection);
+            alert(`✓ Bills generated successfully for ${generatedBills.length} members!`);
+
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('bills_generated', {
+                    period: period,
+                    memberCount: generatedBills.length,
+                    totalCollection: totalCollection
+                });
+            }
+        }
+
+        // Display bills
+        function displayBills(billsList, totalCollection) {
+            const container = document.getElementById('billsTable');
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Unit</th>
+                            <th>Line Items</th>
+                            <th>Total Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            billsList.forEach(bill => {
+                const lineItemsHtml = bill.lineItems.map(li =>
+                    `${li.lineItemName}: ₹${li.total.toFixed(2)}`
+                ).join('<br>');
+
+                html += `
+                    <tr>
+                        <td><strong>${bill.memberName}</strong></td>
+                        <td>${bill.unit}</td>
+                        <td><small>${lineItemsHtml}</small></td>
+                        <td><strong>₹${bill.totalBill.toFixed(2)}</strong></td>
+                        <td>${bill.status === 'paid' ? '✅ Paid' : '⏳ Pending'}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="viewBillDetails('${bill.id}')" style="width: auto; padding: 0.5rem 0.75rem;">Details</button>
                         </td>
                     </tr>
                 `;
@@ -842,53 +1081,64 @@
                 <div class="results-grid" style="margin-top: 2rem;">
                     <div class="result-card">
                         <h3>Total Members</h3>
-                        <div class="amount">${results.length}</div>
+                        <div class="amount">${billsList.length}</div>
                     </div>
                     <div class="result-card">
                         <h3>Total Collection</h3>
-                        <div class="amount">₹${total.toFixed(2)}</div>
+                        <div class="amount">₹${totalCollection.toFixed(2)}</div>
                     </div>
                     <div class="result-card">
                         <h3>Average per Member</h3>
-                        <div class="amount">₹${(total / results.length).toFixed(2)}</div>
+                        <div class="amount">₹${(totalCollection / billsList.length).toFixed(2)}</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Line Items</h3>
+                        <div class="amount">${lineItemsList.filter(i => i.status === 'active').length}</div>
                     </div>
                 </div>
-            `;
-
-            document.getElementById('maintenanceTable').innerHTML = html;
-        }
-
-        function resetCalculator() {
-            document.getElementById('bhkRate').value = '';
-            document.getElementById('sqftRate').value = '';
-            document.getElementById('meteredRate').value = '';
-            document.getElementById('additionalCharges').value = '';
-            document.getElementById('taxRate').value = '18';
-            document.getElementById('quickResults').style.display = 'none';
-            invoices = [];
-            saveInvoices();
-            document.getElementById('maintenanceTable').innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📊</div>
-                    <p>Calculate maintenance to see results for all members.</p>
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <button class="btn btn-secondary" onclick="exportBills()" style="width: 200px;">📥 Export Bills</button>
                 </div>
             `;
+
+            container.innerHTML = html;
         }
 
-        renderLineItems();
-        loadSavedInvoices();
+        // View bill details
+        function viewBillDetails(billId) {
+            const bill = bills.find(b => b.id === billId);
+            if (!bill) return;
 
-        function exportMaintenance() {
-            if (!invoices.length) {
-                alert('No invoices to export.');
+            let details = `Bill Details for ${bill.memberName} (${bill.unit})\n\n`;
+            details += `Period: ${bill.period}\n\n`;
+            details += `Line Items:\n`;
+
+            bill.lineItems.forEach(li => {
+                details += `\n${li.lineItemName}:\n`;
+                details += `  Base: ₹${li.baseAmount.toFixed(2)}\n`;
+                details += `  Tax: ₹${li.tax.toFixed(2)}\n`;
+                details += `  Total: ₹${li.total.toFixed(2)}\n`;
+            });
+
+            details += `\n\nTotal Bill: ₹${bill.totalBill.toFixed(2)}`;
+            details += `\nStatus: ${bill.status}`;
+
+            alert(details);
+        }
+
+        // Export bills
+        function exportBills() {
+            if (bills.length === 0) {
+                alert('❌ No bills to export');
                 return;
             }
-            const json = JSON.stringify(invoices, null, 2);
+
+            const json = JSON.stringify(bills, null, 2);
             const blob = new Blob([json], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `maintenance_invoices_${currentSociety}.json`;
+            a.download = `bills_${currentSociety}_${bills[0].period}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
