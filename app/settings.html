@@ -353,6 +353,7 @@
                 <li><a href="members.html">Members</a></li>
                 <li><a href="maintenance.html">Maintenance</a></li>
                 <li><a href="reports.html">Reports</a></li>
+                <li><a href="receipts.html">Receipts</a></li>
                 <li><a href="settings.html" class="active">Settings</a></li>
             </ul>
         </div>
@@ -605,6 +606,19 @@
                     <small>This is stored for reference in activity payloads.</small>
                 </div>
 
+
+
+                <h2 style="margin-top: 2rem;">Google Sheets Activity Sync</h2>
+                <div class="info-box">
+                    <p>Use a Google Apps Script Web App URL to capture login and page activity in your Google Sheet.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Google Sheet Link (Reference)</label>
+                    <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+                    <small>This is stored for reference in activity payloads.</small>
+                </div>
+
                 <div class="form-group">
                     <label>Apps Script Webhook URL</label>
                     <input type="url" id="sheetsWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
@@ -616,6 +630,21 @@
                     <button class="btn btn-secondary" onclick="testGoogleSheetWebhook()">Test Login Sync</button>
                 </div>
                 <small>If test is successful, one row should be added to your Google Sheet.</small>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Apps Script Code Template (Copy-Paste)</label>
+                    <textarea id="appsScriptTemplate" rows="8" readonly style="width:100%; padding:0.75rem; border:1px solid var(--border); border-radius:6px; font-family:monospace;">function doPost(e) {
+  const sheet = SpreadsheetApp.openById('PASTE_YOUR_SHEET_ID').getSheetByName('Sheet1');
+  const payload = JSON.parse(e.postData.contents || '{}');
+  sheet.appendRow([
+    new Date(), payload.eventType || '', payload.userEmail || '', payload.userRole || '', payload.page || '', JSON.stringify(payload.details || {})
+  ]);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+}</textarea>
+                    <button class="btn btn-secondary" style="margin-top:0.5rem; width:100%;" onclick="copyAppsScriptTemplate()">Copy Apps Script Template</button>
+                </div>
+
+
                 <h2 style="margin-top: 2rem;">Data Management</h2>
 
                 <div class="form-group">
@@ -639,6 +668,7 @@
             </div>
         </div>
     </div>
+
     <script src="activity-tracker.js"></script>
     <script>
         // Load settings from localStorage
@@ -673,6 +703,7 @@
             document.getElementById('waterRate').value = settings.waterRate || '';
             document.getElementById('electricityRate').value = settings.electricityRate || '';
             document.getElementById('fixedCharges').value = settings.fixedCharges || '';
+
             document.getElementById('spreadsheetUrl').value = localStorage.getItem('googleSpreadsheetUrl') || '';
             document.getElementById('sheetsWebhookUrl').value = localStorage.getItem('googleSheetsWebhookUrl') || '';
         }
@@ -739,6 +770,7 @@
             showSuccessMessage();
         }
 
+
         function isAppsScriptWebhook(url) {
             return typeof url === 'string' && /script\.google\.com\/macros\/s\//.test(url);
         }
@@ -798,6 +830,13 @@
                 .catch(() => {
                     alert('Unable to reach webhook URL. Verify Apps Script deployment is public and URL is correct.');
                 });
+        }
+
+        function copyAppsScriptTemplate() {
+            const template = document.getElementById('appsScriptTemplate');
+            template.select();
+            document.execCommand('copy');
+            alert('Apps Script template copied. Paste into script.google.com, set sheet ID, deploy as Web App, then paste /exec URL here.');
         }
 
         // Toggle settings

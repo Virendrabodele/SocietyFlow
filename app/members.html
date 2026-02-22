@@ -176,6 +176,7 @@
             box-shadow: var(--shadow);
         }
 
+        .bulk-import {
          .bulk-import {
             margin-top: 1.5rem;
             padding-top: 1.25rem;
@@ -385,6 +386,7 @@
                 <li><a href="members.html" class="active">Members</a></li>
                 <li><a href="maintenance.html">Maintenance</a></li>
                 <li><a href="reports.html">Reports</a></li>
+                <li><a href="receipts.html">Receipts</a></li>
                 <li><a href="settings.html">Settings</a></li>
             </ul>
         </div>
@@ -476,6 +478,7 @@
 
                     <button type="submit" class="btn btn-primary">Add Member</button>
                 </form>
+
                 <div class="bulk-import">
                     <h3>Bulk Add Members (CSV / Excel)</h3>
                     <div class="form-group">
@@ -510,6 +513,7 @@
             </div>
         </div>
     </div>
+
     <script src="activity-tracker.js"></script>
     <script>
         // Initialize members array from localStorage
@@ -639,6 +643,131 @@
             document.getElementById('bulkPasteData').value = '';
         }
 
+
+        function normalizeType(type) {
+            const value = (type || '').toString().trim().toLowerCase();
+            if (value.includes('bhk')) return 'bhk';
+            if (value.includes('sqft') || value.includes('sq.')) return 'sqft';
+            if (value.includes('meter')) return 'metered';
+            return value;
+        }
+
+        function parseDelimitedLine(line, delimiter) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    const nextChar = line[i + 1];
+                    if (inQuotes && nextChar === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === delimiter && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current.trim());
+            return result;
+        }
+
+        function rowsToMembers(lines, delimiter) {
+            if (!lines.length) return { added: 0, skipped: 0 };
+
+            const firstRow = parseDelimitedLine(lines[0], delimiter).map(v => v.toLowerCase());
+            const hasHeader = firstRow.includes('name') || firstRow.includes('member name');
+            const startIndex = hasHeader ? 1 : 0;
+            const headers = hasHeader ? firstRow : ['name', 'phone', 'email', 'unit', 'type', 'bhk', 'sqft', 'status'];
+
+            let added = 0;
+            let skipped = 0;
+
+            for (let i = startIndex; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cols = parseDelimitedLine(line, delimiter);
+
+                const row = {};
+                headers.forEach((h, idx) => { row[h] = (cols[idx] || '').trim(); });
+
+                const memberName = row.name || row['member name'] || '';
+                const unit = row.unit || row['unit/flat number'] || '';
+                const type = normalizeType(row.type);
+
+                if (!memberName || !unit || !['bhk', 'sqft', 'metered'].includes(type)) {
+                    skipped++;
+                    continue;
+                }
+
+                members.push({
+                    id: Date.now() + i + Math.floor(Math.random() * 1000),
+                    name: memberName,
+                    phone: row.phone || '',
+                    email: row.email || '',
+                    unit: unit,
+                    type: type,
+                    bhk: row.bhk || '1',
+                    sqft: row.sqft || '',
+                    status: (row.status || 'active').toLowerCase(),
+                    joinDate: new Date().toLocaleDateString()
+                });
+                added++;
+            }
+
+            localStorage.setItem('societyMembers', JSON.stringify(members));
+            displayMembers();
+            updateStats();
+
+            return { added, skipped };
+        }
+
+        function importMembersFromFile() {
+            const fileInput = document.getElementById('bulkCsvFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please choose a CSV file first.');
+                return;
+            }
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'xlsx' || ext === 'xls') {
+                alert('Please save Excel as CSV, then upload. Or paste rows from Excel below.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result || '';
+                const delimiter = text.includes('	') ? '	' : ',';
+                const lines = text.split(/\r?\n/).filter(Boolean);
+                const result = rowsToMembers(lines, delimiter);
+                alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+                fileInput.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function importMembersFromPaste() {
+            const raw = document.getElementById('bulkPasteData').value.trim();
+            if (!raw) {
+                alert('Please paste data from Excel first.');
+                return;
+            }
+
+            const lines = raw.split(/\r?\n/).filter(Boolean);
+            const delimiter = lines[0].includes('	') ? '	' : ',';
+            const result = rowsToMembers(lines, delimiter);
+            alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+            document.getElementById('bulkPasteData').value = '';
+        }
 
         // Show/hide fields based on calculation type
         document.getElementById('calculationType').addEventListener('change', function(e) {

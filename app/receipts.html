@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipts - SocietyFlow</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background:#f8fafc; margin:0; color:#1f2937; }
+        nav { background:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+        .nav-container{max-width:1200px;margin:0 auto;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
+        .logo{font-size:1.5rem;font-weight:700;color:#1e40af;text-decoration:none}
+        .logo::before{content:"🏘️ ";}
+        .nav-links{display:flex;gap:1.5rem;list-style:none;margin:0;padding:0}
+        .nav-links a{text-decoration:none;color:#1f2937;font-weight:500}
+        .nav-links a.active,.nav-links a:hover{color:#1e40af}
+        .container{max-width:1200px;margin:0 auto;padding:2rem}
+        .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:1.5rem;box-shadow:0 10px 25px rgba(0,0,0,0.08)}
+        table{width:100%;border-collapse:collapse;margin-top:1rem}
+        th,td{padding:0.75rem;border-bottom:1px solid #e5e7eb;text-align:left}
+        th{color:#1e40af;background:#f8fafc}
+        .btn{padding:0.4rem 0.7rem;border-radius:6px;border:none;cursor:pointer;font-weight:600}
+        .btn-primary{background:#1e40af;color:#fff}
+        .status-paid{color:#059669;font-weight:700}
+        .status-pending{color:#b45309;font-weight:700}
+    </style>
+</head>
+<body>
+<nav>
+    <div class="nav-container">
+        <a class="logo" href="index.html">SocietyFlow</a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="members.html">Members</a></li>
+            <li><a href="maintenance.html">Maintenance</a></li>
+            <li><a href="reports.html">Reports</a></li>
+            <li><a href="receipts.html" class="active">Receipts</a></li>
+            <li><a href="settings.html">Settings</a></li>
+        </ul>
+    </div>
+</nav>
+<div class="container">
+    <h1>🧾 Receipt Entry & Payment Tracking</h1>
+    <p>Manage invoice receipts for the selected society.</p>
+    <div class="card">
+        <div id="receiptTable"></div>
+    </div>
+</div>
+<script src="activity-tracker.js"></script>
+<script>
+    const currentSociety = localStorage.getItem('currentSociety') || 'default';
+    const invoiceKey = 'societyInvoices_' + currentSociety;
+    let invoices = JSON.parse(localStorage.getItem(invoiceKey)) || [];
+
+    function saveInvoices(){ localStorage.setItem(invoiceKey, JSON.stringify(invoices)); }
+
+    function markPaid(id){
+        const inv = invoices.find(i => i.id === id);
+        if(!inv) return;
+        const receiptNo = prompt('Receipt number:', inv.receiptNo || '');
+        if(!receiptNo) return;
+        const paidDate = prompt('Paid date (YYYY-MM-DD):', inv.paidDate || new Date().toISOString().slice(0,10));
+        if(!paidDate) return;
+        inv.paymentStatus='paid'; inv.receiptNo=receiptNo; inv.paidDate=paidDate;
+        saveInvoices(); render();
+    }
+
+    function render(){
+        const el=document.getElementById('receiptTable');
+        if(!invoices.length){ el.innerHTML='<p>No invoices yet. Generate maintenance bills first.</p>'; return; }
+        let html='<table><thead><tr><th>Member</th><th>Unit</th><th>Amount</th><th>Status</th><th>Receipt</th><th>Action</th></tr></thead><tbody>';
+        invoices.forEach(inv=>{
+            html += `<tr><td>${inv.name}</td><td>${inv.unit}</td><td>₹${Number(inv.total||0).toFixed(2)}</td><td class="${inv.paymentStatus==='paid'?'status-paid':'status-pending'}">${inv.paymentStatus==='paid'?'Paid':'Pending'}</td><td>${inv.receiptNo?inv.receiptNo+' ('+(inv.paidDate||'')+')':'-'}</td><td><button class="btn btn-primary" onclick="markPaid('${inv.id}')">Add / Update Receipt</button></td></tr>`;
+        });
+        html += '</tbody></table>';
+        el.innerHTML=html;
+    }
+    render();
+</script>
+</body>
+</html>

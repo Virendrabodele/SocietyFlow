@@ -1,6 +1,7 @@
 (function () {
     const STORAGE_KEY = 'societyActivityLog';
     const WEBHOOK_KEY = 'googleSheetsWebhookUrl';
+    const SPREADSHEET_KEY = 'googleSpreadsheetUrl';
     const SPREADSHEET_KEY = 'https://docs.google.com/spreadsheets/d/1oNWJRk4QltrcKVvdI9HZ5stJMJ955mIvDh6mjhJ_jIQ/edit?gid=0#gid=0';
 
     function safeParse(value, fallback) {
@@ -30,6 +31,7 @@
         logs.push(payload);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(logs.slice(-1000)));
     }
+
     function isAppsScriptUrl(url) {
         return typeof url === 'string' && /script\.google\.com\/macros\/s\//.test(url);
     }

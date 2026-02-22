@@ -497,6 +497,9 @@ async function readMembersFromSheet(sheetId) {
 *Version 2.0 - Multi-User & Google Sheets Support*
 *Last Updated: February 2024*
 
+---
+
+## 🧾 Activity Logging (Login + Page Clicks)
 # 🧾 Activity Logging (Login + Page Clicks)
 
 > Important: A Google Sheet edit URL (like `docs.google.com/spreadsheets/.../edit`) cannot directly receive POST requests from your app.
@@ -536,3 +539,26 @@ Deploy with:
 - **Who has access:** Anyone
 
 This is the simplest alternative to building a full backend.
+
+### Why login is not updating in your sheet
+
+If your app has only the spreadsheet link (like `docs.google.com/spreadsheets/.../edit`) and no Apps Script webhook, rows will **not** be inserted automatically.
+
+You must configure **Settings → System → Apps Script Webhook URL** with your deployed Script URL (ending with `/exec`).
+
+Quick check:
+1. Save webhook URL in Settings
+2. Click **Test Login Sync**
+3. Confirm one row appears with `eventType = login_sync_test`
+4. Then login again and check rows with `eventType = login_success`
+
+### Fast setup for Apps Script webhook
+
+1. Open `script.google.com` and create new project.
+2. Paste the `doPost` template from **Settings → System** in app.
+3. Replace `PASTE_YOUR_SHEET_ID` with your sheet ID.
+4. Deploy as **Web App**:
+   - Execute as: **Me**
+   - Who has access: **Anyone**
+5. Copy deployed `/exec` URL and paste into **Apps Script Webhook URL**.
+6. Click **Test Login Sync** and confirm row appears.

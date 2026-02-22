@@ -544,6 +544,7 @@
         </div>
     </div>
 
+    <script src="activity-tracker.js"></script>
     <script>
         // ═══════════════════════════════════════════════════════════════
         // HELPER FUNCTION: Get correct base path for GitHub Pages
@@ -608,6 +609,9 @@
                 // Store logged-in user
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 localStorage.setItem('userLoginTime', new Date().toISOString());
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('login_success', { email: email });
+                }
                 
                 // Redirect after 1 second with correct path
                 setTimeout(() => {
@@ -615,6 +619,9 @@
                     window.location.href = basePath + 'app/dashboard.html';
                 }, 1000);
             } else {
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('login_failed', { email: email });
+                }
                 errorDiv.innerHTML = '❌ Invalid email or password';
                 errorDiv.style.display = 'block';
             }
@@ -693,6 +700,9 @@
             users.push(newUser);
             localStorage.setItem('societyUsers', JSON.stringify(users));
 
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('signup_success', { email: email, role: role });
+            }
             successDiv.innerHTML = '✓ Account created successfully! Redirecting to login...';
             successDiv.style.display = 'block';
 
@@ -767,6 +777,12 @@
                     createdAt: new Date().toISOString(),
                     googleSheetId: null,
                     isVerified: true,
+                    role: 'resident' // ← RESIDENT ROLE
+                },
+                {
+                    id: 3,
+                    name: 'Master Dashboard',
+                    email: 'masterdashboard@societyflow',
                     role: 'resident'
                 },
                  {
