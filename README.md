@@ -1,4 +1,4 @@
-# 🏘️ SocietyFlow v2.1 - Professional Society Management System
+# 🏘️ SocietyFlow - Professional Society Management System
 
 **Multi-User | Multi-Society | Role-Based Access Control | Google Sheets Ready**
 
