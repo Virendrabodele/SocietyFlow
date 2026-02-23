@@ -47,14 +47,17 @@ model User {
 // ============================================
 
 model Society {
-  id        String   @id @default(uuid())
-  name      String
-  code      String   @unique
-  city      String
-  state     String
-  units     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(uuid())
+  name            String
+  code            String   @unique
+  city            String
+  state           String
+  units           Int
+  googleSheetId   String?  @unique
+  googleSheetUrl  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  dataLastSynced  DateTime?
 
   createdByUserId String
   createdBy       User   @relation("CreatedBySociety", fields: [createdByUserId], references: [id])
@@ -73,6 +76,7 @@ model Society {
 
   @@index([code])
   @@index([createdByUserId])
+  @@index([googleSheetId])
 }
 
 enum AccessRole {
