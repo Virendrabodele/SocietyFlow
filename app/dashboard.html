@@ -633,7 +633,7 @@
 
     <!-- Add Society Modal -->
     <div class="modal" id="addSocietyModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">Add New Society</div>
             <div class="modal-body">
                 <div class="form-group">
@@ -659,6 +659,35 @@
                         <option value="uttar-pradesh">Uttar Pradesh</option>
                         <option value="others">Other States</option>
                     </select>
+                </div>
+
+                <div style="border-top: 2px solid var(--border); margin: 1.5rem 0; padding-top: 1.5rem;">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">Primary Admin Contact</h3>
+                    <div class="form-group">
+                        <label>Mobile Number *</label>
+                        <input type="tel" id="newSocietyMobile" placeholder="9876543210" pattern="[0-9]{10}" maxlength="10">
+                        <small>Enter 10-digit mobile number</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Email ID *</label>
+                        <input type="email" id="newSocietyEmail" placeholder="admin@greenparkapartments.com">
+                        <small>Valid email address required</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Role Assignment</label>
+                        <select id="newSocietyRole">
+                            <option value="admin">Admin (Full access)</option>
+                            <option value="treasurer">Treasurer (Maintenance & Reports)</option>
+                            <option value="secretary">Secretary (Members & Reports)</option>
+                            <option value="resident">Resident (View only)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="border-top: 2px solid var(--border); margin: 1.5rem 0; padding-top: 1.5rem;">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">Committee Members (Optional)</h3>
+                    <div id="committeeMembers" style="margin-bottom: 1rem;"></div>
+                    <button type="button" class="btn btn-secondary" style="width: 100%;" onclick="addCommitteeMember()">+ Add Committee Member</button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -861,8 +890,13 @@
             document.getElementById('totalMembers').textContent = totalMembers;
         }
 
+        // Committee members array
+        let committeeMembers = [];
+
         // Modal functions
         function openAddSocietyModal() {
+            committeeMembers = [];
+            renderCommitteeMembers();
             document.getElementById('addSocietyModal').classList.add('active');
         }
 
@@ -870,15 +904,92 @@
             document.getElementById(modalId).classList.remove('active');
         }
 
+        // Add committee member
+        function addCommitteeMember() {
+            const memberHtml = `
+                <div class="committee-member-row" style="border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; background: var(--bg);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 0.85rem;">Email *</label>
+                            <input type="email" class="committee-email" placeholder="member@example.com" style="padding: 0.5rem;">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 0.85rem;">Mobile *</label>
+                            <input type="tel" class="committee-mobile" placeholder="9876543210" pattern="[0-9]{10}" maxlength="10" style="padding: 0.5rem;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: end;">
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 0.85rem;">Role *</label>
+                            <select class="committee-role" style="padding: 0.5rem;">
+                                <option value="admin">Admin (Full access)</option>
+                                <option value="treasurer">Treasurer (Maintenance & Reports)</option>
+                                <option value="secretary">Secretary (Members & Reports)</option>
+                                <option value="resident">Resident (View only)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="removeCommitteeMember(this)" style="width: auto; margin: 0; padding: 0.5rem 1rem; background: var(--danger);">Remove</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('committeeMembers').insertAdjacentHTML('beforeend', memberHtml);
+        }
+
+        function removeCommitteeMember(btn) {
+            btn.closest('.committee-member-row').remove();
+        }
+
+        function renderCommitteeMembers() {
+            document.getElementById('committeeMembers').innerHTML = '';
+        }
+
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function validateMobile(mobile) {
+            return /^[0-9]{10}$/.test(mobile);
+        }
+
         // Create new society
         function createSociety() {
-            const name = document.getElementById('newSocietyName').value;
+            const name = document.getElementById('newSocietyName').value.trim();
             const units = document.getElementById('newSocietyUnits').value;
-            const city = document.getElementById('newSocietyCity').value;
+            const city = document.getElementById('newSocietyCity').value.trim();
             const state = document.getElementById('newSocietyState').value;
+            const mobile = document.getElementById('newSocietyMobile').value.trim();
+            const email = document.getElementById('newSocietyEmail').value.trim();
+            const role = document.getElementById('newSocietyRole').value;
 
-            if (!name || !units || !city || !state) {
-                alert('Please fill in all fields');
+            // Validation
+            if (!name || !units || !city || !state || !mobile || !email) {
+                alert('❌ Please fill in all required fields');
+                return;
+            }
+
+            if (name.length < 3 || name.length > 100) {
+                alert('❌ Society name must be between 3 and 100 characters');
+                return;
+            }
+
+            if (parseInt(units) <= 0 || parseInt(units) >= 10000) {
+                alert('❌ Number of units must be between 1 and 9999');
+                return;
+            }
+
+            if (city.length < 2) {
+                alert('❌ City name must be at least 2 characters');
+                return;
+            }
+
+            if (!validateMobile(mobile)) {
+                alert('❌ Mobile number must be exactly 10 digits');
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                alert('❌ Please enter a valid email address');
                 return;
             }
 
@@ -895,6 +1006,45 @@
                 }
             }
 
+            // Collect committee members
+            const members = [{
+                email: email,
+                mobile: mobile,
+                role: role,
+                invitationSent: true,
+                status: 'active',
+                joinedAt: new Date().toISOString()
+            }];
+
+            // Add additional committee members
+            const committeeRows = document.querySelectorAll('.committee-member-row');
+            for (let row of committeeRows) {
+                const memberEmail = row.querySelector('.committee-email').value.trim();
+                const memberMobile = row.querySelector('.committee-mobile').value.trim();
+                const memberRole = row.querySelector('.committee-role').value;
+
+                if (!memberEmail || !memberMobile) continue;
+
+                if (!validateEmail(memberEmail)) {
+                    alert('❌ Invalid email for committee member: ' + memberEmail);
+                    return;
+                }
+
+                if (!validateMobile(memberMobile)) {
+                    alert('❌ Invalid mobile for committee member: ' + memberMobile);
+                    return;
+                }
+
+                members.push({
+                    email: memberEmail,
+                    mobile: memberMobile,
+                    role: memberRole,
+                    invitationSent: true,
+                    status: 'active',
+                    joinedAt: new Date().toISOString()
+                });
+            }
+
             const newSociety = {
                 id: Date.now().toString(),
                 userId: currentUser.id,
@@ -904,7 +1054,9 @@
                 state: state,
                 createdAt: new Date().toISOString(),
                 googleSheetId: null,
-                dataLastSynced: null
+                dataLastSynced: null,
+                admins: [email],
+                members: members
             };
 
             societies.push(newSociety);
@@ -914,14 +1066,34 @@
             localStorage.setItem('societyMembers_' + newSociety.id, JSON.stringify([]));
             localStorage.setItem('societySettings_' + newSociety.id, JSON.stringify({}));
 
-            alert('Society created successfully!');
+            // Show success message with member details
+            const memberCount = members.length;
+            const invitationMsg = memberCount > 1
+                ? `\n\n✓ ${memberCount} members have been added to the society.\n✓ Invitations sent to all members.`
+                : '\n\n✓ Primary admin added successfully.';
+
+            alert('✓ Society created successfully!' + invitationMsg);
+
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('society_created', {
+                    societyId: newSociety.id,
+                    societyName: name,
+                    memberCount: memberCount
+                });
+            }
+
             closeModal('addSocietyModal');
-            
+
             // Reset form
             document.getElementById('newSocietyName').value = '';
             document.getElementById('newSocietyUnits').value = '';
             document.getElementById('newSocietyCity').value = '';
             document.getElementById('newSocietyState').value = '';
+            document.getElementById('newSocietyMobile').value = '';
+            document.getElementById('newSocietyEmail').value = '';
+            document.getElementById('newSocietyRole').value = 'admin';
+            committeeMembers = [];
+            renderCommitteeMembers();
 
             loadUserSocieties(currentUser);
         }
