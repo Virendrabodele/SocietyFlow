@@ -3,11 +3,14 @@ import { getPrismaClient } from '../config/database';
 import { sendSuccessResponse, sendErrorResponse, AppError } from '../utils/response';
 import { createAuditLog } from '../utils/audit';
 import { AuthRequest } from '../middleware/auth';
-import { calculateLineItemAmount, calculateInvoiceTotal, MemberVariables } from '../utils/formula-evaluator';
+import { calculateLineItemAmount, MemberVariables } from '../utils/formula-evaluator';
+import { getTaxConfig, calculateTax } from '../services/tax.service';
+import { generateInvoiceNumber } from '../services/invoice-series.service';
+import { generateReceiptNumber } from '../services/receipt-series.service';
 
 export const generateInvoices = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { month, year } = req.query;
+    const { month, year, dueDate, termsAndConditions, paymentInstructions } = req.body;
     const societyId = req.params.id;
     const userId = req.user?.userId;
 
@@ -19,6 +22,18 @@ export const generateInvoices = async (req: AuthRequest, res: Response): Promise
     const periodYear = parseInt(year as string, 10);
 
     const prisma = getPrismaClient();
+
+    // Get society details for invoice numbering
+    const society = await prisma.society.findUnique({
+      where: { id: societyId },
+    });
+
+    if (!society) {
+      throw new AppError('Society not found', 404);
+    }
+
+    // Get tax configuration
+    const taxConfig = await getTaxConfig(societyId);
 
     // Get all active members
     const members = await prisma.member.findMany({
@@ -69,7 +84,6 @@ export const generateInvoices = async (req: AuthRequest, res: Response): Promise
     for (const member of members) {
       const memberVariables = member.variables as MemberVariables;
       const invoiceLineItems = [];
-      const taxableFlags = [];
 
       // Calculate each line item
       for (const lineItem of lineItems) {
@@ -90,48 +104,80 @@ export const generateInvoices = async (req: AuthRequest, res: Response): Promise
             units: calculation.units,
             rate: calculation.rate,
             amount: calculation.amount,
+            taxable: lineItem.taxable,
+            taxRate: lineItem.taxRate,
+            sacHsnCode: lineItem.sacHsnCode || undefined,
             meta: {
               billingHeadId: lineItem.billingHeadId,
               billingHeadName: lineItem.billingHead.name,
               frequency: lineItem.frequency,
             },
           });
-
-          taxableFlags.push(lineItem.taxable);
         } catch (error) {
           console.error(`Error calculating line item ${lineItem.name} for member ${member.name}:`, error);
           // Skip this line item for this member
         }
       }
 
-      // Calculate totals (assume 18% GST for now)
-      const totals = calculateInvoiceTotal(
-        invoiceLineItems.map((item) => ({
-          units: item.units,
-          rate: item.rate,
+      // Calculate tax using the tax service
+      const taxCalculation = calculateTax({
+        lineItems: invoiceLineItems.map((item) => ({
           amount: item.amount,
+          taxable: item.taxable,
+          taxRate: item.taxRate,
         })),
-        taxableFlags,
-        18 // TODO: Get tax rate from society settings
-      );
+        taxConfig: {
+          gstEnabled: taxConfig.gstEnabled,
+          taxRegime: taxConfig.taxRegime,
+          defaultTaxRate: taxConfig.defaultTaxRate,
+          roundingPolicy: taxConfig.roundingPolicy,
+        },
+      });
 
-      // Create invoice with line items
+      // Generate invoice number
+      const invoiceNo = await generateInvoiceNumber(societyId, society.code);
+      const invoiceDate = new Date();
+      const calculatedDueDate = dueDate ? new Date(dueDate) : new Date(invoiceDate.getTime() + 15 * 24 * 60 * 60 * 1000); // Default: 15 days
+
+      // Create invoice with line items and tax lines
       const invoice = await prisma.invoice.create({
         data: {
           societyId,
           memberId: member.id,
+          invoiceNo,
+          invoiceDate,
+          dueDate: calculatedDueDate,
           periodMonth,
           periodYear,
-          subtotal: totals.subtotal,
-          taxAmount: totals.taxAmount,
-          totalAmount: totals.totalAmount,
+          subtotal: taxCalculation.subtotal,
+          taxableAmount: taxCalculation.taxableAmount,
+          cgstAmount: taxCalculation.cgstAmount,
+          sgstAmount: taxCalculation.sgstAmount,
+          igstAmount: taxCalculation.igstAmount,
+          taxAmount: taxCalculation.taxAmount,
+          roundingAmount: taxCalculation.roundingAmount,
+          totalAmount: taxCalculation.totalAmount,
           status: 'GENERATED',
+          isLocked: true, // Lock invoice immediately upon generation
+          termsAndConditions: termsAndConditions || 'Payment due within 15 days of invoice date.',
+          paymentInstructions: paymentInstructions || null,
           lineItems: {
             create: invoiceLineItems,
+          },
+          taxLines: {
+            create: taxCalculation.taxBreakdown.map((breakdown) => ({
+              taxRate: breakdown.taxRate,
+              taxableValue: breakdown.taxableValue,
+              cgst: breakdown.cgst,
+              sgst: breakdown.sgst,
+              igst: breakdown.igst,
+              totalTax: breakdown.totalTax,
+            })),
           },
         },
         include: {
           lineItems: true,
+          taxLines: true,
           member: true,
         },
       });
@@ -239,6 +285,30 @@ export const getInvoiceDetails = async (req: AuthRequest, res: Response): Promis
         receipts: {
           orderBy: { issuedOn: 'desc' },
         },
+        paymentUploads: {
+          include: {
+            uploadedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            verifiedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        society: {
+          include: {
+            bankAccount: true,
+          },
+        },
       },
     });
 
@@ -329,7 +399,7 @@ export const createPayment = async (req: AuthRequest, res: Response): Promise<vo
 
 export const createReceipt = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { receiptNo, issuedOn, fileUrl } = req.body;
+    const { amountReceived, issuedOn, fileUrl, status } = req.body;
     const { id: societyId, invoiceId } = req.params;
     const userId = req.user?.userId;
 
@@ -339,11 +409,27 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
 
     const prisma = getPrismaClient();
 
-    // Verify invoice exists
+    // Get society details for receipt numbering
+    const society = await prisma.society.findUnique({
+      where: { id: societyId },
+    });
+
+    if (!society) {
+      throw new AppError('Society not found', 404);
+    }
+
+    // Verify invoice exists and get payment history
     const invoice = await prisma.invoice.findFirst({
       where: {
         id: invoiceId,
         societyId,
+      },
+      include: {
+        receipts: {
+          where: {
+            status: { not: 'CANCELLED' },
+          },
+        },
       },
     });
 
@@ -351,19 +437,25 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
       throw new AppError('Invoice not found', 404);
     }
 
-    // Check if receipt number already exists
-    const existingReceipt = await prisma.receipt.findUnique({
-      where: {
-        societyId_receiptNo: {
-          societyId,
-          receiptNo,
-        },
-      },
-    });
-
-    if (existingReceipt) {
-      throw new AppError('Receipt with this number already exists', 400);
+    // Validate amount
+    if (!amountReceived || amountReceived <= 0) {
+      throw new AppError('Amount received must be greater than zero', 400);
     }
+
+    // Calculate total already received
+    const totalReceived = invoice.receipts.reduce((sum, receipt) => sum + receipt.amountReceived, 0);
+    const outstanding = invoice.totalAmount - totalReceived;
+
+    // Validate receipt amount doesn't exceed outstanding
+    if (amountReceived > outstanding) {
+      throw new AppError(
+        `Receipt amount (${amountReceived}) exceeds outstanding balance (${outstanding})`,
+        400
+      );
+    }
+
+    // Auto-generate receipt number
+    const receiptNo = await generateReceiptNumber(societyId, society.code);
 
     // Create receipt
     const receipt = await prisma.receipt.create({
@@ -371,10 +463,27 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
         societyId,
         invoiceId,
         receiptNo,
-        issuedOn: new Date(issuedOn),
+        amountReceived,
+        status: status || 'FINAL',
+        issuedOn: issuedOn ? new Date(issuedOn) : new Date(),
         fileUrl: fileUrl || null,
         createdByUserId: userId,
       },
+    });
+
+    // Update invoice status based on total received
+    const newTotalReceived = totalReceived + amountReceived;
+    let invoiceStatus = invoice.status;
+
+    if (newTotalReceived >= invoice.totalAmount) {
+      invoiceStatus = 'PAID';
+    } else if (newTotalReceived > 0) {
+      invoiceStatus = 'PARTIALLY_PAID';
+    }
+
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { status: invoiceStatus },
     });
 
     // Create audit log
@@ -384,10 +493,23 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
       action: 'receipt_create',
       entityType: 'receipt',
       entityId: receipt.id,
-      payload: { invoiceId, receiptNo },
+      payload: {
+        invoiceId,
+        receiptNo,
+        amountReceived,
+        outstanding: outstanding - amountReceived,
+      },
     });
 
-    sendSuccessResponse(res, receipt, 'Receipt created successfully');
+    sendSuccessResponse(
+      res,
+      {
+        ...receipt,
+        outstandingBefore: outstanding,
+        outstandingAfter: outstanding - amountReceived,
+      },
+      'Receipt created successfully'
+    );
   } catch (error) {
     sendErrorResponse(res, error);
   }
@@ -444,6 +566,91 @@ export const getReceipts = async (req: AuthRequest, res: Response): Promise<void
     });
 
     sendSuccessResponse(res, receipts, 'Receipts retrieved successfully');
+  } catch (error) {
+    sendErrorResponse(res, error);
+  }
+};
+
+export const cancelReceipt = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id: societyId, receiptId } = req.params;
+    const { reason } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new AppError('Authentication required', 401);
+    }
+
+    const prisma = getPrismaClient();
+
+    // Get receipt
+    const receipt = await prisma.receipt.findFirst({
+      where: {
+        id: receiptId,
+        societyId,
+      },
+      include: {
+        invoice: true,
+      },
+    });
+
+    if (!receipt) {
+      throw new AppError('Receipt not found', 404);
+    }
+
+    if (receipt.status === 'CANCELLED') {
+      throw new AppError('Receipt is already cancelled', 400);
+    }
+
+    // Cancel receipt (soft delete)
+    const cancelledReceipt = await prisma.receipt.update({
+      where: { id: receiptId },
+      data: {
+        status: 'CANCELLED',
+        cancelledOn: new Date(),
+        cancellationReason: reason || 'Cancelled by admin',
+      },
+    });
+
+    // Recalculate invoice status
+    const allReceipts = await prisma.receipt.findMany({
+      where: {
+        invoiceId: receipt.invoiceId,
+        status: { not: 'CANCELLED' },
+      },
+    });
+
+    const totalReceived = allReceipts.reduce((sum, r) => sum + r.amountReceived, 0);
+    let invoiceStatus = receipt.invoice.status;
+
+    if (totalReceived === 0) {
+      invoiceStatus = 'GENERATED';
+    } else if (totalReceived >= receipt.invoice.totalAmount) {
+      invoiceStatus = 'PAID';
+    } else {
+      invoiceStatus = 'PARTIALLY_PAID';
+    }
+
+    await prisma.invoice.update({
+      where: { id: receipt.invoiceId },
+      data: { status: invoiceStatus },
+    });
+
+    // Create audit log
+    await createAuditLog({
+      userId,
+      societyId,
+      action: 'receipt_cancel',
+      entityType: 'receipt',
+      entityId: receiptId,
+      payload: {
+        receiptNo: receipt.receiptNo,
+        reason,
+        amountReceived: receipt.amountReceived,
+      },
+    });
+
+    sendSuccessResponse(res, cancelledReceipt, 'Receipt cancelled successfully');
   } catch (error) {
     sendErrorResponse(res, error);
   }

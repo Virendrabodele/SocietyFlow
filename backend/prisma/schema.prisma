@@ -37,10 +37,12 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  societiesCreated Society[]        @relation("CreatedBySociety")
-  societyAccess    SocietyAccess[]
-  receiptsCreated  Receipt[]        @relation("CreatedByUser")
-  auditLogs        AuditLog[]
+  societiesCreated       Society[]                @relation("CreatedBySociety")
+  societyAccess          SocietyAccess[]
+  receiptsCreated        Receipt[]                @relation("CreatedByUser")
+  auditLogs              AuditLog[]
+  paymentUploadsCreated  PaymentUploadReference[] @relation("UploadedByUser")
+  paymentUploadsVerified PaymentUploadReference[] @relation("VerifiedByUser")
 
   @@index([email])
   @@index([role])
@@ -51,17 +53,27 @@ model User {
 // ============================================
 
 model Society {
-  id              String   @id @default(uuid())
-  name            String
-  code            String   @unique
-  city            String
-  state           String
-  units           Int
-  googleSheetId   String?  @unique
-  googleSheetUrl  String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  dataLastSynced  DateTime?
+  id             String    @id @default(uuid())
+  name           String
+  code           String    @unique
+  city           String
+  state          String
+  units          Int
+  googleSheetId  String?   @unique
+  googleSheetUrl String?
+  address        String?
+  registrationNo String?
+
+  // India Compliance Fields
+  registeredAddress String?
+  gstin             String?
+  pan               String?
+  contactEmail      String?
+  contactPhone      String?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  dataLastSynced DateTime?
 
   createdByUserId String
   createdBy       User   @relation("CreatedBySociety", fields: [createdByUserId], references: [id])
@@ -81,6 +93,23 @@ model Society {
   paymentSubmissions PaymentSubmission[]
   reminderRules      ReminderRule[]
   approvalRequests   ApprovalRequest[]
+  societyAccess       SocietyAccess[]
+  members             Member[]
+  billingHeads        BillingHead[]
+  billingLineItems    BillingLineItem[]
+  invoices            Invoice[]
+  payments            Payment[]
+  receipts            Receipt[]
+  notifications       Notification[]
+  integrations        Integration[]
+  auditLogs           AuditLog[]
+  taxConfig           TaxConfig?
+  invoiceSeriesConfig InvoiceSeriesConfig?
+  receiptSeriesConfig ReceiptSeriesConfig?
+  bankAccount         BankAccount?
+  receiptSequences    ReceiptSequence[]
+  monthClosures       MonthClosure[]
+  ledgerEntries       LedgerEntry[]
 
   @@index([code])
   @@index([createdByUserId])
@@ -197,10 +226,12 @@ model BillingLineItem {
   name        String
   basisType   BasisType
   rate        Float       @default(0)
-  customKey   String?     // For PER_CUSTOM_KEY basis
-  formulaText String?     // For FORMULA basis
+  customKey   String?
+  formulaText String?
   frequency   Frequency   @default(MONTHLY)
   taxable     Boolean     @default(false)
+  taxRate     Float       @default(0)
+  sacHsnCode  String?
   isActive    Boolean     @default(true)
 
   createdAt DateTime @default(now())
@@ -233,16 +264,31 @@ model Invoice {
   memberId String
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  periodMonth Int // 1-12
+  invoiceNo   String?
+  invoiceDate DateTime  @default(now())
+  dueDate     DateTime?
+
+  periodMonth Int
   periodYear  Int
   dueDate     DateTime?  // Payment due date for reminder calculations
 
-  subtotal    Float
-  taxAmount   Float
-  totalAmount Float
+  subtotal       Float
+  taxableAmount  Float   @default(0)
+  cgstAmount     Float   @default(0)
+  sgstAmount     Float   @default(0)
+  igstAmount     Float   @default(0)
+  taxAmount      Float
+  roundingAmount Float   @default(0)
+  totalAmount    Float
+
+  amountPaid    Float @default(0)
+  balanceAmount Float @default(0)
 
   status      InvoiceStatus @default(GENERATED)
-  generatedAt DateTime      @default(now())
+  isLocked    Boolean       @default(false)
+
+  termsAndConditions  String?
+  paymentInstructions String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -255,11 +301,21 @@ model Invoice {
   paymentSubmissions PaymentSubmission[]
   reminderJobs       ReminderJob[]
 
+  lineItems      InvoiceLineItem[]
+  taxLines       InvoiceTaxLine[]
+  payments       Payment[]
+  receipts       Receipt[]
+  notifications  Notification[]
+  paymentUploads PaymentUploadReference[]
+  ledgerEntries  LedgerEntry[]
+
+  @@unique([societyId, invoiceNo])
   @@unique([societyId, memberId, periodMonth, periodYear])
   @@index([societyId])
   @@index([memberId])
   @@index([status])
   @@index([periodMonth, periodYear])
+  @@index([invoiceNo])
 }
 
 model InvoiceLineItem {
@@ -273,7 +329,14 @@ model InvoiceLineItem {
   rate         Float
   amount       Float
 
-  // Metadata for audit trail
+  taxable      Boolean @default(false)
+  taxRate      Float   @default(0)
+  sacHsnCode   String?
+  cgstAmount   Float   @default(0)
+  sgstAmount   Float   @default(0)
+  igstAmount   Float   @default(0)
+  totalWithTax Float   @default(0)
+
   meta Json @default("{}")
 
   createdAt DateTime @default(now())
@@ -295,12 +358,12 @@ enum PaymentMode {
 }
 
 model Payment {
-  id         String      @id @default(uuid())
-  societyId  String
-  society    Society     @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  id        String      @id @default(uuid())
+  societyId String
+  society   Society     @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
-  invoiceId  String
-  invoice    Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   amountPaid  Float
   paidOn      DateTime
@@ -316,6 +379,12 @@ model Payment {
   @@index([paidOn])
 }
 
+enum ReceiptStatus {
+  PROVISIONAL
+  FINAL
+  CANCELLED
+}
+
 model Receipt {
   id        String   @id @default(uuid())
   societyId String
@@ -324,11 +393,15 @@ model Receipt {
   invoiceId String
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  receiptNo      String
-  issuedOn       DateTime
-  fileUrl        String?
-  createdByUserId String
-  createdBy      User     @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+  receiptNo          String
+  amountReceived     Float
+  status             ReceiptStatus @default(FINAL)
+  issuedOn           DateTime
+  cancelledOn        DateTime?
+  cancellationReason String?
+  fileUrl            String?
+  createdByUserId    String
+  createdBy          User          @relation("CreatedByUser", fields: [createdByUserId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -337,6 +410,7 @@ model Receipt {
   @@index([societyId])
   @@index([invoiceId])
   @@index([issuedOn])
+  @@index([status])
 }
 
 // ============================================
@@ -368,7 +442,7 @@ model Notification {
 
   channel     NotificationChannel
   status      NotificationStatus  @default(PENDING)
-  providerRef String?             // Reference ID from email/SMS provider
+  providerRef String?
   sentAt      DateTime?
   error       String?
 
@@ -386,21 +460,25 @@ model Notification {
 // ============================================
 
 model AuditLog {
-  id         String   @id @default(uuid())
+  id        String   @id @default(uuid())
 
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  societyId  String?
-  society    Society? @relation(fields: [societyId], references: [id], onDelete: SetNull)
+  societyId String?
+  society   Society? @relation(fields: [societyId], references: [id], onDelete: SetNull)
 
-  action     String   // login_success, login_failure, society_create, member_create, etc.
-  entityType String?  // user, society, member, invoice, etc.
+  action     String
+  entityType String?
   entityId   String?
 
-  payload    Json     @default("{}")
+  payload        Json    @default("{}")
+  beforeSnapshot Json?
+  afterSnapshot  Json?
+  sourceIp       String?
+  userAgent      String?
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([societyId])
@@ -426,7 +504,7 @@ model Integration {
   society   Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
   type     IntegrationType
-  config   Json            @default("{}") // Encrypted if contains secrets
+  config   Json            @default("{}")
   isActive Boolean         @default(true)
 
   createdAt DateTime @default(now())
@@ -493,6 +571,89 @@ model PaymentSubmission {
   verifiedAt        DateTime?
   rejectionReason   String?
   verificationNotes String?
+// TAX & COMPLIANCE CONFIGURATION
+// ============================================
+
+enum TaxRegime {
+  CGST_SGST
+  IGST
+}
+
+model TaxConfig {
+  id        String     @id @default(uuid())
+  societyId String     @unique
+  society   Society    @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  gstEnabled      Boolean   @default(false)
+  gstin           String?
+  taxRegime       TaxRegime @default(CGST_SGST)
+  defaultTaxRate  Float     @default(18)
+  taxThreshold    Float?
+  roundingPolicy  String    @default("NEAREST_RUPEE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+}
+
+// ============================================
+// BANK ACCOUNT MANAGEMENT
+// ============================================
+
+model BankAccount {
+  id        String   @id @default(uuid())
+  societyId String   @unique
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  accountName   String
+  accountNumber String
+  ifscCode      String
+  bankName      String
+  branchName    String?
+  upiId         String?
+  qrCodeUrl     String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+}
+
+// ============================================
+// INVOICE & RECEIPT SERIES CONFIGURATION
+// ============================================
+
+model InvoiceSeriesConfig {
+  id        String  @id @default(uuid())
+  societyId String  @unique
+  society   Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  prefix          String  @default("INV")
+  includeYear     Boolean @default(true)
+  includeSocCode  Boolean @default(true)
+  separator       String  @default("/")
+  currentSequence Int     @default(0)
+  resetOnNewYear  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+}
+
+model ReceiptSeriesConfig {
+  id        String  @id @default(uuid())
+  societyId String  @unique
+  society   Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  prefix          String  @default("RCPT")
+  includeYear     Boolean @default(true)
+  includeSocCode  Boolean @default(true)
+  separator       String  @default("/")
+  currentSequence Int     @default(0)
+  resetOnNewYear  Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -554,6 +715,55 @@ model ReminderRule {
   emailBody    String?
   smsBody      String?
   whatsappBody String?
+  @@index([societyId])
+}
+
+model InvoiceTaxLine {
+  id        String  @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  taxRate      Float
+  taxableValue Float
+  cgst         Float  @default(0)
+  sgst         Float  @default(0)
+  igst         Float  @default(0)
+  totalTax     Float
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+// ============================================
+// PAYMENT UPLOAD REFERENCE
+// ============================================
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PaymentUploadReference {
+  id        String             @id @default(uuid())
+  invoiceId String
+  invoice   Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  uploadedByUserId String
+  uploadedBy       User   @relation("UploadedByUser", fields: [uploadedByUserId], references: [id])
+
+  referenceNo        String?
+  transactionDate    DateTime
+  amount             Float
+  remarks            String?
+  fileUrl            String?
+
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedByUserId   String?
+  verifiedBy         User?              @relation("VerifiedByUser", fields: [verifiedByUserId], references: [id])
+  verifiedAt         DateTime?
+  verificationNotes  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -635,6 +845,74 @@ model ApprovalRequest {
   // State snapshots for audit
   oldState Json?
   newState Json?
+  @@index([invoiceId])
+  @@index([uploadedByUserId])
+  @@index([verificationStatus])
+}
+
+// ============================================
+// RECEIPT SEQUENCE (India FY-aware numbering)
+// ============================================
+
+enum ReceiptNumberFormat {
+  FY_SOC_SEQ
+  SOC_YEAR_MONTH
+  CUSTOM
+}
+
+model ReceiptSequence {
+  id        String   @id @default(uuid())
+  societyId String
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  format         ReceiptNumberFormat @default(FY_SOC_SEQ)
+  customFormat   String?
+  prefix         String              @default("RCPT")
+  currentSeq     Int                 @default(0)
+  financialYear  String
+  resetOnNewFY   Boolean             @default(true)
+
+  lastUpdatedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([societyId, financialYear])
+  @@index([societyId])
+}
+
+// ============================================
+// MONTH-END CLOSURE MANAGEMENT
+// ============================================
+
+enum MonthClosureStatus {
+  DRAFT
+  REVIEWED
+  APPROVED
+  LOCKED
+}
+
+model MonthClosure {
+  id        String   @id @default(uuid())
+  societyId String
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  periodMonth Int
+  periodYear  Int
+
+  status MonthClosureStatus @default(DRAFT)
+
+  lockedAt     DateTime?
+  lockedBy     String?
+  unlockReason String?
+
+  reviewedAt DateTime?
+  reviewedBy String?
+  approvedAt DateTime?
+  approvedBy String?
+
+  totalBilled      Float @default(0)
+  totalCollected   Float @default(0)
+  totalOutstanding Float @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -667,4 +945,53 @@ model ApprovalAction {
 
   @@index([approvalRequestId])
   @@index([actionByUserId])
+  @@unique([societyId, periodMonth, periodYear])
+  @@index([societyId])
+  @@index([status])
+  @@index([periodMonth, periodYear])
+}
+
+// ============================================
+// LEDGER ENTRIES (Double-Entry Bookkeeping)
+// ============================================
+
+enum LedgerEntryType {
+  DEBIT
+  CREDIT
+}
+
+enum TransactionType {
+  INVOICE
+  PAYMENT
+  REFUND
+  ADJUSTMENT
+  OPENING_BALANCE
+}
+
+model LedgerEntry {
+  id        String   @id @default(uuid())
+  societyId String
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  memberId String?
+
+  entryType       LedgerEntryType
+  transactionType TransactionType
+  amount          Float
+  description     String
+
+  accountHead     String
+  transactionDate DateTime
+  referenceNo     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([societyId])
+  @@index([invoiceId])
+  @@index([transactionDate])
+  @@index([transactionType])
+  @@index([accountHead])
 }

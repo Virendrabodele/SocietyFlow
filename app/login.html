@@ -544,6 +544,8 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
+    <script src="api.js"></script>
     <script src="activity-tracker.js"></script>
     <script>
         // ═══════════════════════════════════════════════════════════════
@@ -574,9 +576,9 @@
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // LOGIN HANDLER - With GitHub Pages path fix
+        // LOGIN HANDLER - API-based authentication
         // ═══════════════════════════════════════════════════════════════
-        function handleLogin() {
+        async function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
@@ -598,39 +600,36 @@
                 return;
             }
 
-            // Check localStorage for user
-            const users = JSON.parse(localStorage.getItem('societyUsers')) || [];
-            const user = users.find(u => u.email === email && u.password === password);
+            try {
+                // Call API login endpoint
+                const response = await api.login(email, password);
 
-            if (user) {
                 successDiv.innerHTML = '✓ Login successful! Redirecting...';
                 successDiv.style.display = 'block';
-                
-                // Store logged-in user
-                localStorage.setItem('currentUser', JSON.stringify(user));
-                localStorage.setItem('userLoginTime', new Date().toISOString());
+
+                // Record activity
                 if (window.recordSocietyFlowEvent) {
                     window.recordSocietyFlowEvent('login_success', { email: email });
                 }
-                
+
                 // Redirect after 1 second with correct path
                 setTimeout(() => {
                     const basePath = getBasePath();
                     window.location.href = basePath + 'app/dashboard.html';
                 }, 1000);
-            } else {
+            } catch (error) {
                 if (window.recordSocietyFlowEvent) {
                     window.recordSocietyFlowEvent('login_failed', { email: email });
                 }
-                errorDiv.innerHTML = '❌ Invalid email or password';
+                errorDiv.innerHTML = `❌ ${error.message || 'Login failed. Please try again.'}`;
                 errorDiv.style.display = 'block';
             }
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // SIGNUP HANDLER - With role support
+        // SIGNUP HANDLER - API-based registration
         // ═══════════════════════════════════════════════════════════════
-        function handleSignup() {
+        async function handleSignup() {
             const name = document.getElementById('signupName').value;
             const email = document.getElementById('signupEmail').value;
             const society = document.getElementById('signupSociety').value;
@@ -675,43 +674,41 @@
                 return;
             }
 
-            // Check if user exists
-            const users = JSON.parse(localStorage.getItem('societyUsers')) || [];
-            if (users.find(u => u.email === email)) {
-                errorDiv.innerHTML = '❌ Email already registered';
+            try {
+                // Map frontend role to backend role enum
+                const roleMapping = {
+                    'admin': 'SOCIETY_ADMIN',
+                    'resident': 'RESIDENT'
+                };
+
+                // Create user data for API
+                const userData = {
+                    name: name,
+                    email: email,
+                    password: password,
+                    role: roleMapping[role] || 'RESIDENT'
+                };
+
+                // Call API registration endpoint
+                const response = await api.register(userData);
+
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('signup_success', { email: email, role: role });
+                }
+
+                successDiv.innerHTML = '✓ Account created successfully! Redirecting to login...';
+                successDiv.style.display = 'block';
+
+                setTimeout(() => {
+                    document.getElementById('loginEmail').value = email;
+                    document.getElementById('loginPassword').value = '';
+                    switchTab('login');
+                    document.getElementById('signupSuccess').style.display = 'none';
+                }, 1500);
+            } catch (error) {
+                errorDiv.innerHTML = `❌ ${error.message || 'Registration failed. Please try again.'}`;
                 errorDiv.style.display = 'block';
-                return;
             }
-
-            // Create new user with role
-            const newUser = {
-                id: Date.now(),
-                name: name,
-                email: email,
-                society: society,
-                state: state,
-                password: password,
-                createdAt: new Date().toISOString(),
-                googleSheetId: null,
-                isVerified: false,
-                role: role
-            };
-
-            users.push(newUser);
-            localStorage.setItem('societyUsers', JSON.stringify(users));
-
-            if (window.recordSocietyFlowEvent) {
-                window.recordSocietyFlowEvent('signup_success', { email: email, role: role });
-            }
-            successDiv.innerHTML = '✓ Account created successfully! Redirecting to login...';
-            successDiv.style.display = 'block';
-
-            setTimeout(() => {
-                document.getElementById('loginEmail').value = email;
-                document.getElementById('loginPassword').value = '';
-                switchTab('login');
-                document.getElementById('signupSuccess').style.display = 'none';
-            }, 1500);
         }
 
         // Password validation
@@ -734,11 +731,10 @@
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // CHECK IF ALREADY LOGGED IN - With GitHub Pages path fix
+        // CHECK IF ALREADY LOGGED IN - API-based authentication check
         // ═══════════════════════════════════════════════════════════════
         window.addEventListener('load', function() {
-            const currentUser = localStorage.getItem('currentUser');
-            if (currentUser) {
+            if (api.isAuthenticated()) {
                 // Redirect to dashboard if already logged in
                 const basePath = getBasePath();
                 window.location.href = basePath + 'app/dashboard.html';
@@ -746,61 +742,12 @@
         });
 
         // ═══════════════════════════════════════════════════════════════
-        // DEMO CREDENTIALS - Create on first load
+        // DEMO CREDENTIALS - For testing purposes
         // ═══════════════════════════════════════════════════════════════
-        console.log('Demo Credentials:');
+        console.log('Demo Credentials (create these via signup):');
         console.log('Email: demo@society.com');
         console.log('Password: Demo@123');
-        
-        // Create demo user on first load
-        if (!localStorage.getItem('societyUsers')) {
-            const demoUsers = [
-                {
-                    id: 1,
-                    name: 'Demo Admin',
-                    email: 'demo@society.com',
-                    society: 'Green Park Apartments',
-                    state: 'maharashtra',
-                    password: 'Demo@123',
-                    createdAt: new Date().toISOString(),
-                    googleSheetId: null,
-                    isVerified: true,
-                    role: 'admin'
-                },
-                {
-                    id: 2,
-                    name: 'Demo Resident',
-                    email: 'resident@society.com',
-                    society: 'Green Park Apartments',
-                    state: 'maharashtra',
-                    password: 'Demo@123',
-                    createdAt: new Date().toISOString(),
-                    googleSheetId: null,
-                    isVerified: true,
-                    role: 'resident' // ← RESIDENT ROLE
-                },
-                {
-                    id: 3,
-                    name: 'Master Dashboard',
-                    email: 'masterdashboard@societyflow',
-                    role: 'resident'
-                },
-                 {
-                    id: 3,
-                    name: 'Master Dashboard',
-                    email: 'masterdashboard@societyflow.com',
-                    society: 'SocietyFlow Master',
-                    state: 'others',
-                    password: 'Master@123',
-                    createdAt: new Date().toISOString(),
-                    googleSheetId: null,
-                    isVerified: true,
-                    role: 'admin'
-                }
-            ];
-            localStorage.setItem('societyUsers', JSON.stringify(demoUsers));
-        }
+        console.log('Note: Use the signup form to create new accounts.');
     </script>
-    <script src="activity-tracker.js"></script>
 </body>
 </html>

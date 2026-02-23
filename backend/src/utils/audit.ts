@@ -8,6 +8,8 @@ interface AuditLogData {
   entityType?: string;
   entityId?: string;
   payload?: Record<string, unknown>;
+  beforeSnapshot?: unknown;
+  afterSnapshot?: unknown;
 }
 
 export const createAuditLog = async (data: AuditLogData): Promise<void> => {
@@ -22,6 +24,9 @@ export const createAuditLog = async (data: AuditLogData): Promise<void> => {
         entityType: data.entityType || null,
         entityId: data.entityId || null,
         payload: (data.payload || {}) as Prisma.InputJsonValue,
+        payload: (data.payload || {}) as object,
+        beforeSnapshot: data.beforeSnapshot ? (data.beforeSnapshot as object) : undefined,
+        afterSnapshot: data.afterSnapshot ? (data.afterSnapshot as object) : undefined,
       },
     });
   } catch (error) {
