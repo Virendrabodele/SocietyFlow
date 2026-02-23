@@ -13,16 +13,46 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
 # Temporary files
 *.tmp
 ~*
+tmp/
+temp/
 
-# Node modules (for future)
+# Node modules
 node_modules/
 npm-debug.log
 
 # Environment variables
 .env
 .env.local
+.env.*.local
+backend/.env
+backend/.env.local
 
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Docker
+*.pid
+*.sock
+
+# Backups
+backups/
+*.sql
+*.sql.gz
+
+# Monitoring data
+monitoring/prometheus/data/
+monitoring/grafana/data/
+monitoring/loki/data/
+
+# SSL certificates (keep configs, not actual certs)
+*.pem
+*.key
+*.csr
+*.crt
