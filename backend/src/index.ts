@@ -7,6 +7,7 @@ import { getPrismaClient, disconnectPrisma } from './config/database';
 import { errorHandler } from './middleware/error-handler';
 
 // Import routes
+import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import societyRoutes from './routes/society.routes';
 import memberRoutes from './routes/member.routes';
@@ -14,6 +15,8 @@ import billingRoutes from './routes/billing.routes';
 import invoiceRoutes from './routes/invoice.routes';
 import complianceRoutes from './routes/compliance.routes';
 import reportsRoutes from './routes/reports.routes';
+import bankAccountRoutes from './routes/bank-account.routes';
+import complianceRoutes from './routes/compliance.routes';
 
 const app: Application = express();
 
@@ -41,14 +44,8 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
-});
+// Health check endpoints (no auth required)
+app.use('/health', healthRoutes);
 
 // API routes
 const apiPrefix = config.server.apiPrefix;
@@ -60,6 +57,8 @@ app.use(`${apiPrefix}/societies`, billingRoutes);
 app.use(`${apiPrefix}/societies`, invoiceRoutes);
 app.use(`${apiPrefix}/societies`, complianceRoutes);
 app.use(`${apiPrefix}/societies`, reportsRoutes);
+app.use(`${apiPrefix}/societies`, bankAccountRoutes);
+app.use(`${apiPrefix}`, complianceRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

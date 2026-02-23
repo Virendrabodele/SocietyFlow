@@ -518,13 +518,43 @@ corpus_weight:0.5"></textarea>
         </div>
     </div>
 
+    <script src="config.js"></script>
+    <script src="api.js"></script>
     <script src="activity-tracker.js"></script>
     <script>
-        // Initialize members array from localStorage
-        const currentSociety = localStorage.getItem('currentSociety') || 'default';
-        const memberKey = 'societyMembers_' + currentSociety;
-        let members = JSON.parse(localStorage.getItem(memberKey)) || JSON.parse(localStorage.getItem('societyMembers')) || [];
+        // Initialize members array from API
+        let currentSociety = api.getCurrentSociety();
+        let members = [];
         let editingMemberId = null;
+
+        // Check authentication and load members
+        window.addEventListener('load', async function() {
+            if (!api.isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            currentSociety = api.getCurrentSociety();
+            if (!currentSociety) {
+                alert('Please select a society first from the dashboard.');
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            await loadMembers();
+        });
+
+        // Load members from API
+        async function loadMembers() {
+            try {
+                members = await api.getMembers(currentSociety);
+                displayMembers();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading members:', error);
+                alert('Failed to load members. Please try again.');
+            }
+        }
 
         function normalizeType(type) {
             const value = (type || '').toString().trim().toLowerCase();
@@ -560,8 +590,7 @@ corpus_weight:0.5"></textarea>
         }
 
         function saveMembers() {
-            localStorage.setItem(memberKey, JSON.stringify(members));
-            localStorage.setItem('societyMembers', JSON.stringify(members));
+            // No-op: saving is now done via API calls
         }
 
         function rowsToMembers(lines, delimiter) {
@@ -598,9 +627,8 @@ corpus_weight:0.5"></textarea>
                 });
                 added++;
             }
-            saveMembers();
-            displayMembers();
-            updateStats();
+            // Bulk import would need API endpoint - for now just reload
+            loadMembers();
             return { added, skipped };
         }
 
@@ -654,43 +682,44 @@ corpus_weight:0.5"></textarea>
             return Object.entries(obj).map(([k, v]) => `${k}:${v}`).join('\n');
         }
 
-        // Add / Update member form
-        document.getElementById('memberForm').addEventListener('submit', function(e) {
+        // Add / Update member form - API-based
+        document.getElementById('memberForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = {
                 name: document.getElementById('memberName').value,
-                phone: document.getElementById('memberPhone').value,
-                email: document.getElementById('memberEmail').value,
-                unit: document.getElementById('unitNumber').value,
-                type: 'mixed',
-                bhk: Number(document.getElementById('bhkValue').value || 0),
-                sqft: Number(document.getElementById('sqftValue').value || 0),
-                waterReading: Number(document.getElementById('waterReading').value || 0),
-                dgReading: Number(document.getElementById('dgReading').value || 0),
-                meterReading: Number(document.getElementById('meterReading').value || 0),
-                customVariables: parseCustomVariables(document.getElementById('customVariables').value),
-                status: document.getElementById('memberStatus').value
+                unitNumber: document.getElementById('unitNumber').value,
+                phone: document.getElementById('memberPhone').value || undefined,
+                email: document.getElementById('memberEmail').value || undefined,
+                status: document.getElementById('memberStatus').value.toUpperCase(),
+                variables: {
+                    bhk: Number(document.getElementById('bhkValue').value || 0),
+                    sqft: Number(document.getElementById('sqftValue').value || 0),
+                    waterReading: Number(document.getElementById('waterReading').value || 0),
+                    dgReading: Number(document.getElementById('dgReading').value || 0),
+                    meterReading: Number(document.getElementById('meterReading').value || 0),
+                    ...parseCustomVariables(document.getElementById('customVariables').value)
+                }
             };
 
-            if (editingMemberId !== null) {
-                const idx = members.findIndex(function(m) { return m.id === editingMemberId; });
-                if (idx !== -1) {
-                    members[idx] = Object.assign({}, members[idx], formData);
+            try {
+                if (editingMemberId !== null) {
+                    await api.updateMember(currentSociety, editingMemberId, formData);
+                    editingMemberId = null;
+                    document.querySelector('#memberForm button[type=submit]').textContent = 'Add Member';
+                    const cancelBtn = document.getElementById('cancelEditBtn');
+                    if (cancelBtn) cancelBtn.remove();
+                    alert('Member updated successfully!');
+                } else {
+                    await api.createMember(currentSociety, formData);
+                    alert('Member added successfully!');
                 }
-                editingMemberId = null;
-                document.querySelector('#memberForm button[type=submit]').textContent = 'Add Member';
-                const cancelBtn = document.getElementById('cancelEditBtn');
-                if (cancelBtn) cancelBtn.remove();
-                alert('Member updated successfully!');
-            } else {
-                members.push(Object.assign({ id: Date.now(), joinDate: new Date().toLocaleDateString() }, formData));
-                alert('Member added successfully!');
-            }
 
-            saveMembers();
-            this.reset();
-            displayMembers();
-            updateStats();
+                this.reset();
+                await loadMembers();
+            } catch (error) {
+                console.error('Error saving member:', error);
+                alert(`Failed to save member: ${error.message || 'Please try again.'}`);
+            }
         });
 
         // Edit member — populate form with existing data
@@ -701,14 +730,14 @@ corpus_weight:0.5"></textarea>
             document.getElementById('memberName').value = member.name || '';
             document.getElementById('memberPhone').value = member.phone || '';
             document.getElementById('memberEmail').value = member.email || '';
-            document.getElementById('unitNumber').value = member.unit || '';
-            document.getElementById('bhkValue').value = member.bhk || '';
-            document.getElementById('sqftValue').value = member.sqft || '';
-            document.getElementById('waterReading').value = member.waterReading || '';
-            document.getElementById('dgReading').value = member.dgReading || '';
-            document.getElementById('meterReading').value = member.meterReading || '';
-            document.getElementById('customVariables').value = customVariablesToText(member.customVariables);
-            document.getElementById('memberStatus').value = member.status || 'active';
+            document.getElementById('unitNumber').value = member.unitNumber || '';
+            document.getElementById('bhkValue').value = member.variables?.bhk || '';
+            document.getElementById('sqftValue').value = member.variables?.sqft || '';
+            document.getElementById('waterReading').value = member.variables?.waterReading || '';
+            document.getElementById('dgReading').value = member.variables?.dgReading || '';
+            document.getElementById('meterReading').value = member.variables?.meterReading || '';
+            document.getElementById('customVariables').value = customVariablesToText(member.variables);
+            document.getElementById('memberStatus').value = (member.status || 'ACTIVE').toLowerCase();
             const submitBtn = document.querySelector('#memberForm button[type=submit]');
             submitBtn.textContent = 'Update Member';
             if (!document.getElementById('cancelEditBtn')) {
@@ -756,36 +785,39 @@ corpus_weight:0.5"></textarea>
                     <tbody>
             `;
             membersToShow.forEach(member => {
+                const vars = member.variables || {};
                 const detailParts = [];
-                if (Number(member.bhk || 0) > 0) detailParts.push(`${member.bhk} BHK`);
-                if (Number(member.sqft || 0) > 0) detailParts.push(`${member.sqft} SQFT`);
-                if (Number(member.waterReading || 0) > 0) detailParts.push(`Water:${member.waterReading}`);
-                if (Number(member.dgReading || 0) > 0) detailParts.push(`DG:${member.dgReading}`);
-                if (Number(member.meterReading || 0) > 0) detailParts.push(`Meter:${member.meterReading}`);
-                if (member.customVariables && Object.keys(member.customVariables).length > 0) {
-                    detailParts.push(`+${Object.keys(member.customVariables).length} custom`);
+                if (Number(vars.bhk || 0) > 0) detailParts.push(`${vars.bhk} BHK`);
+                if (Number(vars.sqft || 0) > 0) detailParts.push(`${vars.sqft} SQFT`);
+                if (Number(vars.waterReading || 0) > 0) detailParts.push(`Water:${vars.waterReading}`);
+                if (Number(vars.dgReading || 0) > 0) detailParts.push(`DG:${vars.dgReading}`);
+                if (Number(vars.meterReading || 0) > 0) detailParts.push(`Meter:${vars.meterReading}`);
+                const customVarCount = Object.keys(vars).filter(k => !['bhk', 'sqft', 'waterReading', 'dgReading', 'meterReading'].includes(k)).length;
+                if (customVarCount > 0) {
+                    detailParts.push(`+${customVarCount} custom`);
                 }
                 const details = detailParts.length ? detailParts.join(', ') : 'Standard';
-                const statusBg = member.status === 'active' ? '#d1fae5' : '#fee2e2';
-                const statusColor = member.status === 'active' ? '#065f46' : '#991b1b';
+                const statusLower = (member.status || 'active').toLowerCase();
+                const statusBg = statusLower === 'active' ? '#d1fae5' : '#fee2e2';
+                const statusColor = statusLower === 'active' ? '#065f46' : '#991b1b';
 
                 // Add email and SMS buttons if contact info exists
-                const emailButton = member.email ? `<button class="btn-small" onclick="sendEmailToResident(${member.id})" style="background: #3b82f6; color: white;" title="Send Email">📧</button>` : '';
-                const smsButton = member.phone ? `<button class="btn-small" onclick="sendSMSToResident(${member.id})" style="background: #10b981; color: white;" title="Send SMS">📱</button>` : '';
+                const emailButton = member.email ? `<button class="btn-small" onclick="sendEmailToResident('${member.id}')" style="background: #3b82f6; color: white;" title="Send Email">📧</button>` : '';
+                const smsButton = member.phone ? `<button class="btn-small" onclick="sendSMSToResident('${member.id}')" style="background: #10b981; color: white;" title="Send SMS">📱</button>` : '';
 
                 tableHTML += `
                     <tr>
                         <td><strong>${member.name}</strong></td>
-                        <td>${member.unit}</td>
+                        <td>${member.unitNumber || member.unit || 'N/A'}</td>
                         <td>${details}</td>
-                        <td><span style="background:${statusBg};color:${statusColor};padding:0.25rem 0.75rem;border-radius:20px;font-size:0.85rem;">${member.status}</span></td>
-                        <td>${member.joinDate}</td>
+                        <td><span style="background:${statusBg};color:${statusColor};padding:0.25rem 0.75rem;border-radius:20px;font-size:0.85rem;">${statusLower}</span></td>
+                        <td>${new Date(member.createdAt || Date.now()).toLocaleDateString()}</td>
                         <td>
                             <div class="action-buttons">
                                 ${emailButton}
                                 ${smsButton}
-                                <button class="btn-small btn-edit" onclick="editMember(${member.id})">Edit</button>
-                                <button class="btn-small btn-delete" onclick="deleteMember(${member.id})">Delete</button>
+                                <button class="btn-small btn-edit" onclick="editMember('${member.id}')">Edit</button>
+                                <button class="btn-small btn-delete" onclick="deleteMember('${member.id}')">Delete</button>
                             </div>
                         </td>
                     </tr>
@@ -795,13 +827,17 @@ corpus_weight:0.5"></textarea>
             container.innerHTML = tableHTML;
         }
 
-        // Delete member
-        function deleteMember(id) {
+        // Delete member - API-based
+        async function deleteMember(id) {
             if (confirm('Are you sure you want to delete this member?')) {
-                members = members.filter(m => m.id !== id);
-                saveMembers();
-                displayMembers();
-                updateStats();
+                try {
+                    await api.deleteMember(currentSociety, id);
+                    alert('Member deleted successfully!');
+                    await loadMembers();
+                } catch (error) {
+                    console.error('Error deleting member:', error);
+                    alert(`Failed to delete member: ${error.message || 'Please try again.'}`);
+                }
             }
         }
 
@@ -809,7 +845,7 @@ corpus_weight:0.5"></textarea>
         document.getElementById('searchBox').addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase();
             const filtered = members.filter(m =>
-                m.name.toLowerCase().includes(searchTerm) || m.unit.toLowerCase().includes(searchTerm)
+                m.name.toLowerCase().includes(searchTerm) || (m.unitNumber || m.unit || '').toLowerCase().includes(searchTerm)
             );
             displayMembers(filtered);
         });
@@ -817,8 +853,8 @@ corpus_weight:0.5"></textarea>
         // Update statistics
         function updateStats() {
             document.getElementById('totalMembers').textContent = members.length;
-            document.getElementById('bhkMembers').textContent = members.filter(m => Number(m.bhk || 0) > 0).length;
-            document.getElementById('sqftMembers').textContent = members.filter(m => Number(m.sqft || 0) > 0).length;
+            document.getElementById('bhkMembers').textContent = members.filter(m => Number(m.variables?.bhk || 0) > 0).length;
+            document.getElementById('sqftMembers').textContent = members.filter(m => Number(m.variables?.sqft || 0) > 0).length;
         }
 
         // Send email to resident using society email
@@ -834,9 +870,9 @@ corpus_weight:0.5"></textarea>
                 return;
             }
 
-            // Get society email from settings
-            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
-            const societyEmail = settings.email;
+            // Get society email from settings (TODO: fetch from API in settings migration)
+            const settings = {}; // TODO: Implement settings API
+            const societyEmail = settings.email || 'admin@society.com';
             const societyName = settings.societyName || 'Society';
 
             if (!societyEmail) {
@@ -866,9 +902,9 @@ corpus_weight:0.5"></textarea>
                 return;
             }
 
-            // Get society phone from settings
-            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
-            const societyPhone = settings.phone;
+            // Get society phone from settings (TODO: fetch from API in settings migration)
+            const settings = {}; // TODO: Implement settings API
+            const societyPhone = settings.phone || '';
             const societyName = settings.societyName || 'Society';
 
             if (!societyPhone) {
@@ -883,10 +919,6 @@ corpus_weight:0.5"></textarea>
             // Open SMS app
             window.location.href = smsLink;
         }
-
-        // Initial display
-        displayMembers();
-        updateStats();
     </script>
 </body>
 </html>
