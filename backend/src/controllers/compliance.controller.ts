@@ -22,7 +22,7 @@ import {
 
 export const getTaxConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const taxConfig = await getTaxConfig(societyId);
 
     sendSuccessResponse(res, taxConfig, 'Tax configuration retrieved successfully');
@@ -33,7 +33,7 @@ export const getTaxConfiguration = async (req: AuthRequest, res: Response): Prom
 
 export const updateTaxConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -78,7 +78,7 @@ export const updateTaxConfiguration = async (req: AuthRequest, res: Response): P
 
 export const getInvoiceSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const config = await getInvoiceSeriesConfig(societyId);
 
     sendSuccessResponse(res, config, 'Invoice series configuration retrieved successfully');
@@ -92,7 +92,7 @@ export const updateInvoiceSeriesConfiguration = async (
   res: Response
 ): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -131,7 +131,7 @@ export const updateInvoiceSeriesConfiguration = async (
 
 export const getReceiptSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const config = await getReceiptSeriesConfig(societyId);
 
     sendSuccessResponse(res, config, 'Receipt series configuration retrieved successfully');
@@ -145,7 +145,7 @@ export const updateReceiptSeriesConfiguration = async (
   res: Response
 ): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const userId = req.user?.userId;
 
     if (!userId) {

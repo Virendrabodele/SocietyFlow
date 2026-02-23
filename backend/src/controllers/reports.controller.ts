@@ -9,7 +9,7 @@ import { AuthRequest } from '../middleware/auth';
 
 export const getMonthEndReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const { month, year } = req.query;
 
     if (!month || !year) {
@@ -117,7 +117,7 @@ export const getMonthEndReport = async (req: AuthRequest, res: Response): Promis
 
 export const getTaxSummaryReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const { startMonth, startYear, endMonth, endYear } = req.query;
 
     const prisma = getPrismaClient();
@@ -190,7 +190,7 @@ export const getTaxSummaryReport = async (req: AuthRequest, res: Response): Prom
 
 export const getCollectionSummaryReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const { month, year } = req.query;
 
     if (!month || !year) {
@@ -270,7 +270,7 @@ export const getCollectionSummaryReport = async (req: AuthRequest, res: Response
 
 export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const { startDate, endDate, action, entityType, userId, page = '1', limit = '50' } = req.query;
 
     const prisma = getPrismaClient();
@@ -288,15 +288,15 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     if (action) {
-      where.action = action;
+      where.action = action as string;
     }
 
     if (entityType) {
-      where.entityType = entityType;
+      where.entityType = entityType as string;
     }
 
     if (userId) {
-      where.userId = userId;
+      where.userId = userId as string;
     }
 
     const pageNum = parseInt(page as string, 10);
@@ -345,7 +345,7 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
 
 export const getFinancialEventsReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id;
+    const societyId = req.params.id as string;
     const { startDate, endDate } = req.query;
 
     const prisma = getPrismaClient();
