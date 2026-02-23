@@ -1,0 +1,135 @@
+groups:
+  - name: societyflow_alerts
+    interval: 30s
+    rules:
+      # API Down Alert
+      - alert: APIDown
+        expr: up{job="societyflow-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "SocietyFlow API is down"
+          description: "The API service has been down for more than 1 minute."
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High 5xx error rate detected"
+          description: "More than 5% of requests are returning 5xx errors."
+
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High API response time"
+          description: "95th percentile response time is above 1 second."
+
+      # Database Connection Failures
+      - alert: DatabaseConnectionFailures
+        expr: rate(database_connection_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Database connection failures detected"
+          description: "Database connection errors are occurring."
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: node
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes."
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: node
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85%."
+
+      # Low Disk Space
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100) < 15
+        for: 5m
+        labels:
+          severity: critical
+          service: node
+        annotations:
+          summary: "Low disk space"
+          description: "Available disk space is below 15%."
+
+      # Container Down
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name=~"societyflow-.*"})
+        for: 2m
+        labels:
+          severity: critical
+          service: docker
+        annotations:
+          summary: "Container is down"
+          description: "A SocietyFlow container has been down for more than 2 minutes."
+
+      # High Container Memory Usage
+      - alert: HighContainerMemory
+        expr: (container_memory_usage_bytes{name=~"societyflow-.*"} / container_spec_memory_limit_bytes{name=~"societyflow-.*"}) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: docker
+        annotations:
+          summary: "Container using high memory"
+          description: "Container {{ $labels.name }} is using over 90% of its memory limit."
+
+      # Redis Down
+      - alert: RedisDown
+        expr: up{job="redis-exporter"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 2 minutes."
+
+      # PostgreSQL Down
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been down for more than 1 minute."
+
+      # Too Many DB Connections
+      - alert: TooManyDBConnections
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "Too many database connections"
+          description: "Database has more than 80 active connections."
