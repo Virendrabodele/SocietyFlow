@@ -17,6 +17,10 @@ datasource db {
 enum UserRole {
   MASTER_ADMIN
   SOCIETY_ADMIN
+  TREASURER
+  BILLING_OPERATOR
+  APPROVER
+  AUDITOR
   COMMITTEE_USER
   RESIDENT
 }
@@ -63,16 +67,20 @@ model Society {
   createdBy       User   @relation("CreatedBySociety", fields: [createdByUserId], references: [id])
 
   // Relations
-  societyAccess    SocietyAccess[]
-  members          Member[]
-  billingHeads     BillingHead[]
-  billingLineItems BillingLineItem[]
-  invoices         Invoice[]
-  payments         Payment[]
-  receipts         Receipt[]
-  notifications    Notification[]
-  integrations     Integration[]
-  auditLogs        AuditLog[]
+  societyAccess      SocietyAccess[]
+  members            Member[]
+  billingHeads       BillingHead[]
+  billingLineItems   BillingLineItem[]
+  invoices           Invoice[]
+  payments           Payment[]
+  receipts           Receipt[]
+  notifications      Notification[]
+  integrations       Integration[]
+  auditLogs          AuditLog[]
+  bankAccounts       SocietyBankAccount[]
+  paymentSubmissions PaymentSubmission[]
+  reminderRules      ReminderRule[]
+  approvalRequests   ApprovalRequest[]
 
   @@index([code])
   @@index([createdByUserId])
@@ -227,6 +235,7 @@ model Invoice {
 
   periodMonth Int // 1-12
   periodYear  Int
+  dueDate     DateTime?  // Payment due date for reminder calculations
 
   subtotal    Float
   taxAmount   Float
@@ -239,10 +248,12 @@ model Invoice {
   updatedAt DateTime @updatedAt
 
   // Relations
-  lineItems     InvoiceLineItem[]
-  payments      Payment[]
-  receipts      Receipt[]
-  notifications Notification[]
+  lineItems          InvoiceLineItem[]
+  payments           Payment[]
+  receipts           Receipt[]
+  notifications      Notification[]
+  paymentSubmissions PaymentSubmission[]
+  reminderJobs       ReminderJob[]
 
   @@unique([societyId, memberId, periodMonth, periodYear])
   @@index([societyId])
@@ -424,4 +435,236 @@ model Integration {
   @@index([societyId])
   @@index([type])
   @@index([isActive])
+}
+
+// ============================================
+// BANK ACCOUNT & PAYMENT SUBMISSION
+// ============================================
+
+model SocietyBankAccount {
+  id        String   @id @default(uuid())
+  societyId String
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  bankName          String
+  accountHolderName String
+  accountNumber     String   // Stored encrypted
+  ifscCode          String
+  upiId             String?
+  qrCodeUrl         String?  // URL/path to QR code image
+  isDefault         Boolean  @default(false)
+  isActive          Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  paymentSubmissions PaymentSubmission[]
+
+  @@index([societyId])
+  @@index([isActive])
+}
+
+enum PaymentSubmissionStatus {
+  PENDING
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+model PaymentSubmission {
+  id        String                   @id @default(uuid())
+  societyId String
+  society   Society                  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  invoiceId String
+  invoice   Invoice                  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  bankAccountId String?
+  bankAccount   SocietyBankAccount?    @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+
+  amount            Float
+  transactionRef    String?  // UTR/Reference number
+  paidDate          DateTime
+  submittedByUserId String?  // Resident or admin who submitted
+  status            PaymentSubmissionStatus @default(SUBMITTED)
+
+  verifiedByUserId  String?  // Admin/Committee who verified
+  verifiedAt        DateTime?
+  rejectionReason   String?
+  verificationNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  paymentProofs PaymentProof[]
+
+  @@index([societyId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([paidDate])
+}
+
+model PaymentProof {
+  id                  String            @id @default(uuid())
+  paymentSubmissionId String
+  paymentSubmission   PaymentSubmission @relation(fields: [paymentSubmissionId], references: [id], onDelete: Cascade)
+
+  fileUrl      String  // S3 URL or local path
+  fileName     String
+  fileSize     Int     // In bytes
+  mimeType     String
+  uploadedBy   String? // User ID who uploaded
+  uploadedAt   DateTime @default(now())
+
+  @@index([paymentSubmissionId])
+}
+
+// ============================================
+// REMINDER AUTOMATION
+// ============================================
+
+enum ReminderType {
+  PRE_DUE_D7
+  PRE_DUE_D3
+  OVERDUE_D1
+  CUSTOM
+}
+
+enum ReminderChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+model ReminderRule {
+  id        String   @id @default(uuid())
+  societyId String
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  name        String
+  type        ReminderType
+  daysOffset  Int      // Negative for pre-due, positive for overdue
+  channel     ReminderChannel
+  isActive    Boolean  @default(true)
+
+  // Template with variables: {{name}}, {{unit}}, {{amount}}, {{dueDate}}, {{invoiceNo}}
+  emailSubject String?
+  emailBody    String?
+  smsBody      String?
+  whatsappBody String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  reminderJobs ReminderJob[]
+
+  @@index([societyId])
+  @@index([isActive])
+  @@index([type])
+}
+
+enum ReminderJobStatus {
+  SCHEDULED
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model ReminderJob {
+  id            String   @id @default(uuid())
+  reminderRuleId String
+  reminderRule  ReminderRule @relation(fields: [reminderRuleId], references: [id], onDelete: Cascade)
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  memberId  String  // Denormalized for faster queries
+
+  scheduledAt DateTime
+  sentAt      DateTime?
+  status      ReminderJobStatus @default(SCHEDULED)
+  error       String?
+  providerRef String?  // External provider reference
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reminderRuleId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+// ============================================
+// APPROVAL & MAKER-CHECKER
+// ============================================
+
+enum ApprovalType {
+  BILLING_RATE_CHANGE
+  WAIVER_DISCOUNT
+  VOID_RECEIPT
+  EDIT_VERIFIED_PAYMENT
+  BACKDATED_INVOICE
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  EXECUTED
+}
+
+model ApprovalRequest {
+  id        String         @id @default(uuid())
+  societyId String
+  society   Society        @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  type          ApprovalType
+  entityType    String  // billing_line_item, payment, invoice, etc.
+  entityId      String
+  description   String
+
+  requestedByUserId String
+  status            ApprovalStatus @default(PENDING_APPROVAL)
+
+  // State snapshots for audit
+  oldState Json?
+  newState Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  actions ApprovalAction[]
+
+  @@index([societyId])
+  @@index([status])
+  @@index([type])
+  @@index([requestedByUserId])
+}
+
+enum ApprovalActionType {
+  APPROVE
+  REJECT
+}
+
+model ApprovalAction {
+  id                String          @id @default(uuid())
+  approvalRequestId String
+  approvalRequest   ApprovalRequest @relation(fields: [approvalRequestId], references: [id], onDelete: Cascade)
+
+  actionType    ApprovalActionType
+  actionByUserId String
+  reason        String?
+  comment       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([approvalRequestId])
+  @@index([actionByUserId])
 }
