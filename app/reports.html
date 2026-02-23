@@ -500,6 +500,8 @@
                 <button class="btn btn-pdf" onclick="exportToPDF()">📥 Export as PDF</button>
                 <button class="btn btn-excel" onclick="exportToExcel()">📥 Export as Excel</button>
                 <button class="btn btn-secondary" onclick="printReport()">🖨️ Print</button>
+                <button class="btn btn-primary" onclick="sendBulkEmail()" style="background: #3b82f6;">📧 Send Bulk Email</button>
+                <button class="btn btn-primary" onclick="sendBulkSMS()" style="background: #10b981;">📱 Send Bulk SMS</button>
             </div>
         </div>
     </div>
@@ -508,6 +510,7 @@
     <script>
         let members = JSON.parse(localStorage.getItem('societyMembers')) || [];
         let selectedTemplate = 'members';
+        let currentFilteredMembers = []; // Store filtered members for bulk operations
 
         // Set current month as default
         const today = new Date();
@@ -548,6 +551,9 @@
                 alert('No members match the selected filter');
                 return;
             }
+
+            // Store filtered members for bulk operations
+            currentFilteredMembers = filteredMembers;
 
             let reportHTML = `
                 <div class="report-header">
@@ -649,6 +655,89 @@
 
         function printReport() {
             window.print();
+        }
+
+        // Send bulk email to all members in current report
+        function sendBulkEmail() {
+            if (currentFilteredMembers.length === 0) {
+                alert('Please generate a report first before sending bulk emails');
+                return;
+            }
+
+            // Get society email from settings
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            const societyEmail = settings.email;
+            const societyName = settings.societyName || 'Society';
+
+            if (!societyEmail) {
+                alert('Society email is not configured. Please go to Settings > Society Information to add your society email address.');
+                return;
+            }
+
+            // Check email/SMS notification settings
+            const emailNotifEnabled = document.getElementById('emailNotif')?.classList.contains('active');
+
+            // Collect all member emails
+            const memberEmails = currentFilteredMembers
+                .filter(m => m.email)
+                .map(m => m.email);
+
+            if (memberEmails.length === 0) {
+                alert('None of the members in this report have email addresses on file');
+                return;
+            }
+
+            // Create mailto link for bulk email (BCC to keep privacy)
+            const subject = encodeURIComponent(`Important Notice from ${societyName}`);
+            const body = encodeURIComponent(`Dear Residents,\n\n[Your message here]\n\nBest regards,\n${societyName}\n${societyEmail}`);
+            const mailtoLink = `mailto:${societyEmail}?bcc=${memberEmails.join(',')}&subject=${subject}&body=${body}`;
+
+            // Confirm before opening
+            if (confirm(`Send email to ${memberEmails.length} members?\n\nThis will open your email client with all recipients in BCC.`)) {
+                window.location.href = mailtoLink;
+            }
+        }
+
+        // Send bulk SMS to all members in current report
+        function sendBulkSMS() {
+            if (currentFilteredMembers.length === 0) {
+                alert('Please generate a report first before sending bulk SMS');
+                return;
+            }
+
+            // Get society phone from settings
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            const societyPhone = settings.phone;
+            const societyName = settings.societyName || 'Society';
+
+            if (!societyPhone) {
+                alert('Society phone number is not configured. Please go to Settings > Society Information to add your society phone number.');
+                return;
+            }
+
+            // Check SMS notification settings
+            const smsNotifEnabled = document.getElementById('smsNotif')?.classList.contains('active');
+
+            // Collect all member phones
+            const memberPhones = currentFilteredMembers
+                .filter(m => m.phone)
+                .map(m => m.phone);
+
+            if (memberPhones.length === 0) {
+                alert('None of the members in this report have phone numbers on file');
+                return;
+            }
+
+            // Show list of phone numbers to copy
+            const phoneList = memberPhones.join('\n');
+            alert(`Found ${memberPhones.length} members with phone numbers.\n\nNote: Bulk SMS requires a third-party SMS service. Here are the phone numbers:\n\n${phoneList.substring(0, 200)}${phoneList.length > 200 ? '...' : ''}\n\nYou can copy these numbers and use your SMS provider to send bulk messages.`);
+
+            // For single recipient, use SMS protocol
+            if (memberPhones.length === 1) {
+                const message = encodeURIComponent(`Message from ${societyName}:`);
+                const smsLink = `sms:${memberPhones[0]}?body=${message}`;
+                window.location.href = smsLink;
+            }
         }
 
         // Set default month
