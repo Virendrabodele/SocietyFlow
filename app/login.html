@@ -544,6 +544,7 @@
         </div>
     </div>
 
+    <script src="activity-tracker.js"></script>
     <script>
         // Tab switching
         function switchTab(tabName) {
@@ -561,8 +562,8 @@
         }
 
         // Login Handler
-        function handleLogin() {
-            const email = document.getElementById('loginEmail').value;
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
             const successDiv = document.getElementById('loginSuccess');
@@ -583,9 +584,22 @@
                 return;
             }
 
-            // Check localStorage for user
-            const users = JSON.parse(localStorage.getItem('societyUsers')) || [];
-            const user = users.find(u => u.email === email && u.password === password);
+            // Try backend login first if API client is present, then fallback to local mode.
+            let user = null;
+            try {
+                if (window.SocietyFlowAPI && typeof window.SocietyFlowAPI.login === 'function') {
+                    const apiResult = await window.SocietyFlowAPI.login({ email, password });
+                    user = apiResult && apiResult.user ? apiResult.user : null;
+                }
+            } catch (error) {
+                console.warn('Backend login unavailable, falling back to local login.', error);
+            }
+
+            // Local fallback login (works on GitHub Pages / static hosting)
+            if (!user) {
+                const users = JSON.parse(localStorage.getItem('societyUsers')) || [];
+                user = users.find(u => (u.email || '').toLowerCase() === email && u.password === password);
+            }
 
             if (user) {
                 successDiv.innerHTML = '✓ Login successful! Redirecting...';
@@ -594,13 +608,19 @@
                 // Store logged-in user
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 localStorage.setItem('userLoginTime', new Date().toISOString());
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('login_success', { email: email });
+                }
                 
                 // Redirect after 1 second
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1000);
             } else {
-                errorDiv.innerHTML = '❌ Invalid email or password';
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('login_failed', { email: email });
+                }
+                errorDiv.innerHTML = '❌ Invalid email or password. Try demo@society.com / Demo@123';
                 errorDiv.style.display = 'block';
             }
         }
@@ -676,6 +696,9 @@
             users.push(newUser);
             localStorage.setItem('societyUsers', JSON.stringify(users));
 
+            if (window.recordSocietyFlowEvent) {
+                window.recordSocietyFlowEvent('signup_success', { email: email, role: role });
+            }
             successDiv.innerHTML = '✓ Account created successfully! Redirecting to login...';
             successDiv.style.display = 'block';
 
@@ -719,37 +742,69 @@
         console.log('Demo Credentials:');
         console.log('Email: demo@society.com');
         console.log('Password: Demo@123');
+        console.log('Master: masterdashboard@societyflow.com');
+        console.log('Password: Master@123');
         
-        // Create demo user on first load
-        if (!localStorage.getItem('societyUsers')) {
-            const demoUsers = [
-                {
-                    id: 1,
-                    name: 'Demo Admin',
-                    email: 'demo@society.com',
-                    society: 'Green Park Apartments',
-                    state: 'maharashtra',
-                    password: 'Demo@123',
-                    createdAt: new Date().toISOString(),
-                    googleSheetId: null,
-                    isVerified: true,
-                    role: 'admin' // ← ROLE ADDED
-                },
-                {
-                    id: 2,
-                    name: 'Demo Resident',
-                    email: 'resident@society.com',
-                    society: 'Green Park Apartments',
-                    state: 'maharashtra',
-                    password: 'Demo@123',
-                    createdAt: new Date().toISOString(),
-                    googleSheetId: null,
-                    isVerified: true,
-                    role: 'resident' // ← RESIDENT ROLE
-                }
-            ];
-            localStorage.setItem('societyUsers', JSON.stringify(demoUsers));
-        }
+        // Ensure demo users exist for static/local mode login.
+        const demoUsers = [
+            {
+                id: 1,
+                name: 'Demo Admin',
+                email: 'demo@society.com',
+                society: 'Green Park Apartments',
+                state: 'maharashtra',
+                password: 'Demo@123',
+                createdAt: new Date().toISOString(),
+                googleSheetId: null,
+                isVerified: true,
+                role: 'admin' // ← ROLE ADDED
+            },
+            {
+                id: 2,
+                name: 'Demo Resident',
+                email: 'resident@society.com',
+                society: 'Green Park Apartments',
+                state: 'maharashtra',
+                password: 'Demo@123',
+                createdAt: new Date().toISOString(),
+                googleSheetId: null,
+                isVerified: true,
+                role: 'resident' // ← RESIDENT ROLE
+            },
+            {
+                id: 3,
+                name: 'Master Dashboard',
+                email: 'masterdashboard@societyflow',
+                society: 'SocietyFlow Master',
+                state: 'others',
+                password: 'Master@123',
+                createdAt: new Date().toISOString(),
+                googleSheetId: null,
+                isVerified: true,
+                role: 'admin'
+            },
+            {
+                id: 4,
+                name: 'Master Dashboard',
+                email: 'masterdashboard@societyflow.com',
+                society: 'SocietyFlow Master',
+                state: 'others',
+                password: 'Master@123',
+                createdAt: new Date().toISOString(),
+                googleSheetId: null,
+                isVerified: true,
+                role: 'admin'
+            }
+        ];
+
+        const users = JSON.parse(localStorage.getItem('societyUsers')) || [];
+        const existingEmails = new Set(users.map(user => (user.email || '').toLowerCase()));
+        demoUsers.forEach((demoUser) => {
+            if (!existingEmails.has((demoUser.email || '').toLowerCase())) {
+                users.push(demoUser);
+            }
+        });
+        localStorage.setItem('societyUsers', JSON.stringify(users));
     </script>
 </body>
 </html>

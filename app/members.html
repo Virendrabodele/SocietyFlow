@@ -176,6 +176,47 @@
             box-shadow: var(--shadow);
         }
 
+        .bulk-import {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px dashed var(--border);
+        }
+
+        .bulk-import h3 {
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .helper-text {
+            font-size: 0.82rem;
+            color: var(--text-light);
+            margin-top: 0.35rem;
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            margin-top: 0.6rem;
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .bulk-textarea {
+            width: 100%;
+            min-height: 110px;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
         /* Members Table Section */
         .table-section {
             background: var(--surface);
@@ -339,9 +380,11 @@
             <a href="index.html" class="logo">SocietyFlow</a>
             <ul class="nav-links">
                 <li><a href="index.html">Home</a></li>
+                <li><a href="dashboard.html">Dashboard</a></li>
                 <li><a href="members.html" class="active">Members</a></li>
                 <li><a href="maintenance.html">Maintenance</a></li>
                 <li><a href="reports.html">Reports</a></li>
+                <li><a href="receipts.html">Receipts</a></li>
                 <li><a href="settings.html">Settings</a></li>
             </ul>
         </div>
@@ -397,29 +440,34 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Calculation Type *</label>
-                        <select id="calculationType" required>
-                            <option value="">Select Type</option>
-                            <option value="bhk">BHK Based</option>
-                            <option value="sqft">SQFT Based</option>
-                            <option value="metered">Metered (per usage)</option>
-                        </select>
+                        <label>BHK</label>
+                        <input type="number" id="bhkValue" placeholder="e.g., 2" min="0">
                     </div>
 
-                    <div class="form-group" id="bhkGroup" style="display: none;">
-                        <label>Number of BHK *</label>
-                        <select id="bhkValue">
-                            <option value="1">1 BHK</option>
-                            <option value="2">2 BHK</option>
-                            <option value="3">3 BHK</option>
-                            <option value="4">4 BHK</option>
-                            <option value="5">5+ BHK</option>
-                        </select>
+                    <div class="form-group">
+                        <label>Built-up Area (SQFT)</label>
+                        <input type="number" id="sqftValue" placeholder="Enter area in sqft" min="0">
                     </div>
 
-                    <div class="form-group" id="sqftGroup" style="display: none;">
-                        <label>Built-up Area (SQFT) *</label>
-                        <input type="number" id="sqftValue" placeholder="Enter area in sqft">
+                    <div class="form-group">
+                        <label>Water Reading</label>
+                        <input type="number" id="waterReading" placeholder="e.g., 125" min="0" step="0.01">
+                    </div>
+
+                    <div class="form-group">
+                        <label>DG Reading</label>
+                        <input type="number" id="dgReading" placeholder="e.g., 35" min="0" step="0.01">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Meter Reading</label>
+                        <input type="number" id="meterReading" placeholder="e.g., 220" min="0" step="0.01">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Custom Variables (key:value per line)</label>
+                        <textarea id="customVariables" class="bulk-textarea" placeholder="sinking_fund_share:1
+corpus_weight:0.5"></textarea>
                     </div>
 
                     <div class="form-group">
@@ -433,6 +481,23 @@
 
                     <button type="submit" class="btn btn-primary">Add Member</button>
                 </form>
+
+                <div class="bulk-import">
+                    <h3>Bulk Add Members (CSV / Excel)</h3>
+                    <div class="form-group">
+                        <label>Upload CSV File</label>
+                        <input type="file" id="bulkCsvFile" accept=".csv,.tsv,.txt,.xlsx,.xls">
+                        <p class="helper-text">Tip: Excel file should be saved as CSV before upload. Required columns: name, unit, type.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="importMembersFromFile()">Import from File</button>
+
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Or Paste Excel Rows</label>
+                        <textarea id="bulkPasteData" class="bulk-textarea" placeholder="Paste rows from Excel (tab-separated). First row can be header."></textarea>
+                        <p class="helper-text">Supported headers: name, phone, email, unit, type, bhk, sqft, status.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="importMembersFromPaste()">Import from Pasted Data</button>
+                </div>
             </div>
 
             <!-- Members Table -->
@@ -452,15 +517,158 @@
         </div>
     </div>
 
+    <script src="activity-tracker.js"></script>
     <script>
         // Initialize members array from localStorage
-        let members = JSON.parse(localStorage.getItem('societyMembers')) || [];
+        const currentSociety = localStorage.getItem('currentSociety') || 'default';
+        const memberKey = 'societyMembers_' + currentSociety;
+        let members = JSON.parse(localStorage.getItem(memberKey)) || JSON.parse(localStorage.getItem('societyMembers')) || [];
 
-        // Show/hide fields based on calculation type
-        document.getElementById('calculationType').addEventListener('change', function(e) {
-            document.getElementById('bhkGroup').style.display = e.target.value === 'bhk' ? 'block' : 'none';
-            document.getElementById('sqftGroup').style.display = e.target.value === 'sqft' ? 'block' : 'none';
-        });
+        function normalizeType(type) {
+            const value = (type || '').toString().trim().toLowerCase();
+            if (value.includes('bhk')) return 'bhk';
+            if (value.includes('sqft') || value.includes('sq.')) return 'sqft';
+            if (value.includes('meter')) return 'metered';
+            return value;
+        }
+
+        function parseDelimitedLine(line, delimiter) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    const nextChar = line[i + 1];
+                    if (inQuotes && nextChar === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === delimiter && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current.trim());
+            return result;
+        }
+
+        function rowsToMembers(lines, delimiter) {
+            if (!lines.length) return { added: 0, skipped: 0 };
+
+            const firstRow = parseDelimitedLine(lines[0], delimiter).map(v => v.toLowerCase());
+            const hasHeader = firstRow.includes('name') || firstRow.includes('member name');
+            const startIndex = hasHeader ? 1 : 0;
+            const headers = hasHeader ? firstRow : ['name', 'phone', 'email', 'unit', 'type', 'bhk', 'sqft', 'status'];
+
+            let added = 0;
+            let skipped = 0;
+
+            for (let i = startIndex; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cols = parseDelimitedLine(line, delimiter);
+
+                const row = {};
+                headers.forEach((h, idx) => { row[h] = (cols[idx] || '').trim(); });
+
+                const memberName = row.name || row['member name'] || '';
+                const unit = row.unit || row['unit/flat number'] || '';
+                const type = normalizeType(row.type || 'mixed');
+
+                if (!memberName || !unit) {
+                    skipped++;
+                    continue;
+                }
+
+                members.push({
+                    id: Date.now() + i + Math.floor(Math.random() * 1000),
+                    name: memberName,
+                    phone: row.phone || '',
+                    email: row.email || '',
+                    unit: unit,
+                    type: type || 'mixed',
+                    bhk: Number(row.bhk || 0),
+                    sqft: Number(row.sqft || 0),
+                    waterReading: Number(row.water || row.waterreading || 0),
+                    dgReading: Number(row.dg || row.dgreading || 0),
+                    meterReading: Number(row.meter || row.meterreading || 0),
+                    customVariables: {},
+                    status: (row.status || 'active').toLowerCase(),
+                    joinDate: new Date().toLocaleDateString()
+                });
+                added++;
+            }
+
+            localStorage.setItem(memberKey, JSON.stringify(members));
+                localStorage.setItem('societyMembers', JSON.stringify(members));
+            displayMembers();
+            updateStats();
+
+            return { added, skipped };
+        }
+
+        function importMembersFromFile() {
+            const fileInput = document.getElementById('bulkCsvFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please choose a CSV file first.');
+                return;
+            }
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'xlsx' || ext === 'xls') {
+                alert('Please save Excel as CSV, then upload. Or paste rows from Excel below.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result || '';
+                const delimiter = text.includes('	') ? '	' : ',';
+                const lines = text.split(/\r?\n/).filter(Boolean);
+                const result = rowsToMembers(lines, delimiter);
+                alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+                fileInput.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function importMembersFromPaste() {
+            const raw = document.getElementById('bulkPasteData').value.trim();
+            if (!raw) {
+                alert('Please paste data from Excel first.');
+                return;
+            }
+
+            const lines = raw.split(/\r?\n/).filter(Boolean);
+            const delimiter = lines[0].includes('	') ? '	' : ',';
+            const result = rowsToMembers(lines, delimiter);
+            alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+            document.getElementById('bulkPasteData').value = '';
+        }
+
+        function parseCustomVariables(rawText) {
+            const data = {};
+            (rawText || '').split(/
+?
+/).forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.includes(':')) return;
+                const [key, ...rest] = trimmed.split(':');
+                const val = rest.join(':').trim();
+                if (!key.trim()) return;
+                const num = Number(val);
+                data[key.trim()] = Number.isNaN(num) ? val : num;
+            });
+            return data;
+        }
 
         // Add member
         document.getElementById('memberForm').addEventListener('submit', function(e) {
@@ -472,20 +680,23 @@
                 phone: document.getElementById('memberPhone').value,
                 email: document.getElementById('memberEmail').value,
                 unit: document.getElementById('unitNumber').value,
-                type: document.getElementById('calculationType').value,
-                bhk: document.getElementById('bhkValue').value,
-                sqft: document.getElementById('sqftValue').value,
+                type: 'mixed',
+                bhk: Number(document.getElementById('bhkValue').value || 0),
+                sqft: Number(document.getElementById('sqftValue').value || 0),
+                waterReading: Number(document.getElementById('waterReading').value || 0),
+                dgReading: Number(document.getElementById('dgReading').value || 0),
+                meterReading: Number(document.getElementById('meterReading').value || 0),
+                customVariables: parseCustomVariables(document.getElementById('customVariables').value),
                 status: document.getElementById('memberStatus').value,
                 joinDate: new Date().toLocaleDateString()
             };
 
             members.push(member);
+            localStorage.setItem(memberKey, JSON.stringify(members));
             localStorage.setItem('societyMembers', JSON.stringify(members));
             
             // Reset form
             this.reset();
-            document.getElementById('bhkGroup').style.display = 'none';
-            document.getElementById('sqftGroup').style.display = 'none';
             
             // Update display
             displayMembers();
@@ -524,14 +735,19 @@
             `;
 
             membersToShow.forEach(member => {
-                const details = member.type === 'bhk' ? `${member.bhk} BHK` : 
-                               member.type === 'sqft' ? `${member.sqft} SQFT` : 'Metered';
+                const detailParts = [];
+                if (Number(member.bhk || 0) > 0) detailParts.push(`${member.bhk} BHK`);
+                if (Number(member.sqft || 0) > 0) detailParts.push(`${member.sqft} SQFT`);
+                if (Number(member.waterReading || 0) > 0) detailParts.push(`Water:${member.waterReading}`);
+                if (Number(member.dgReading || 0) > 0) detailParts.push(`DG:${member.dgReading}`);
+                if (Number(member.meterReading || 0) > 0) detailParts.push(`Meter:${member.meterReading}`);
+                const details = detailParts.length ? detailParts.join(', ') : 'Standard';
                 
                 tableHTML += `
                     <tr>
                         <td><strong>${member.name}</strong></td>
                         <td>${member.unit}</td>
-                        <td>${member.type.toUpperCase()}</td>
+                        <td>${(member.type || 'mixed').toUpperCase()}</td>
                         <td>${details}</td>
                         <td><span style="background: ${member.status === 'active' ? '#d1fae5' : '#fee2e2'}; color: ${member.status === 'active' ? '#065f46' : '#991b1b'}; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">${member.status}</span></td>
                         <td>${member.joinDate}</td>
@@ -557,7 +773,8 @@
         function deleteMember(id) {
             if (confirm('Are you sure you want to delete this member?')) {
                 members = members.filter(m => m.id !== id);
-                localStorage.setItem('societyMembers', JSON.stringify(members));
+                localStorage.setItem(memberKey, JSON.stringify(members));
+            localStorage.setItem('societyMembers', JSON.stringify(members));
                 displayMembers();
                 updateStats();
             }
@@ -581,8 +798,8 @@
         // Update statistics
         function updateStats() {
             document.getElementById('totalMembers').textContent = members.length;
-            document.getElementById('bhkMembers').textContent = members.filter(m => m.type === 'bhk').length;
-            document.getElementById('sqftMembers').textContent = members.filter(m => m.type === 'sqft').length;
+            document.getElementById('bhkMembers').textContent = members.filter(m => Number(m.bhk || 0) > 0).length;
+            document.getElementById('sqftMembers').textContent = members.filter(m => Number(m.sqft || 0) > 0).length;
         }
 
         // Initial display
