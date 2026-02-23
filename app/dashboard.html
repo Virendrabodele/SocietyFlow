@@ -74,6 +74,61 @@
             gap: 1.5rem;
         }
 
+        .context-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+        }
+
+        .context-badge-icon {
+            font-size: 1.25rem;
+        }
+
+        .context-badge-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .context-badge-label {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .context-badge-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .role-badge {
+            padding: 0.5rem 1rem;
+            background: var(--success);
+            color: white;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+        }
+
+        .role-badge.master {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+        }
+
+        .role-badge.society {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+        }
+
         .google-status {
             display: flex;
             align-items: center;
@@ -227,6 +282,44 @@
             box-shadow: var(--shadow);
         }
 
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-action-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 1rem 1.5rem;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .quick-action-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .quick-action-icon {
+            font-size: 1.5rem;
+        }
+
         /* Stats Section */
         .stats-grid {
             display: grid;
@@ -241,6 +334,12 @@
             border-radius: 12px;
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
         }
 
         .stat-card h3 {
@@ -253,6 +352,12 @@
             font-size: 2.5rem;
             font-weight: 700;
             color: var(--primary);
+        }
+
+        .stat-card .stat-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
         }
 
         /* Societies Grid */
@@ -566,6 +671,18 @@
         </div>
 
         <div class="header-right">
+            <!-- Current Society Context Badge -->
+            <div class="context-badge" id="contextBadge" style="display: none;">
+                <div class="context-badge-icon">🏘️</div>
+                <div class="context-badge-text">
+                    <div class="context-badge-label">Current Society</div>
+                    <div class="context-badge-value" id="currentSocietyName">Not Selected</div>
+                </div>
+            </div>
+
+            <!-- Role Badge -->
+            <div class="role-badge" id="roleBadge">Admin</div>
+
             <div class="google-status">
                 <div class="status-indicator" id="googleStatus"></div>
                 <span id="googleStatusText">Not Connected</span>
@@ -606,19 +723,47 @@
             <button id="addSocietyButton" class="add-society-btn" onclick="openAddSocietyModal()">+ Add New Society</button>
         </div>
 
+        <!-- Quick Actions -->
+        <div class="quick-actions" id="quickActions" style="display: none;">
+            <a href="./members.html" class="quick-action-btn">
+                <span class="quick-action-icon">👥</span>
+                <span>Members</span>
+            </a>
+            <a href="./maintenance.html" class="quick-action-btn">
+                <span class="quick-action-icon">💰</span>
+                <span>Maintenance</span>
+            </a>
+            <a href="./receipts.html" class="quick-action-btn">
+                <span class="quick-action-icon">🧾</span>
+                <span>Receipts</span>
+            </a>
+            <a href="./reports.html" class="quick-action-btn">
+                <span class="quick-action-icon">📊</span>
+                <span>Reports</span>
+            </a>
+        </div>
+
         <!-- Stats -->
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Total Societies</h3>
                 <div class="number" id="totalSocieties">0</div>
+                <div class="stat-subtitle" id="societiesSubtitle">Managed societies</div>
             </div>
             <div class="stat-card">
                 <h3>Total Members</h3>
                 <div class="number" id="totalMembers">0</div>
+                <div class="stat-subtitle" id="membersSubtitle">Across all societies</div>
             </div>
             <div class="stat-card">
-                <h3>Data Synced</h3>
-                <div class="number" id="dataSynced">0%</div>
+                <h3>Outstanding Dues</h3>
+                <div class="number" id="totalOutstanding">₹0</div>
+                <div class="stat-subtitle" id="outstandingSubtitle">Pending payments</div>
+            </div>
+            <div class="stat-card">
+                <h3>Collected This Month</h3>
+                <div class="number" id="collectedThisMonth" style="color: var(--success)">₹0</div>
+                <div class="stat-subtitle" id="collectedSubtitle">Current month</div>
             </div>
         </div>
 
@@ -748,6 +893,31 @@
             document.getElementById('userRole').textContent = user.role === 'resident' ? 'Resident' : (masterUser ? 'Master Admin' : 'Admin');
             document.getElementById('userEmail').textContent = user.email;
 
+            // Update role badge
+            const roleBadge = document.getElementById('roleBadge');
+            if (masterUser) {
+                roleBadge.textContent = '👑 Master Admin';
+                roleBadge.className = 'role-badge master';
+            } else if (user.role === 'resident') {
+                roleBadge.textContent = '👤 Resident';
+                roleBadge.className = 'role-badge';
+            } else {
+                roleBadge.textContent = '🔑 Society Admin';
+                roleBadge.className = 'role-badge society';
+            }
+
+            // Update context badge with current society
+            const currentSocietyId = localStorage.getItem('currentSociety');
+            if (currentSocietyId) {
+                const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
+                const selectedSociety = allSocieties.find(s => s.id === currentSocietyId);
+                if (selectedSociety) {
+                    document.getElementById('contextBadge').style.display = 'flex';
+                    document.getElementById('currentSocietyName').textContent = selectedSociety.name;
+                    document.getElementById('quickActions').style.display = 'flex';
+                }
+            }
+
             // Apply role-based access
             if (user.role === 'resident') {
                 document.getElementById('addSocietyButton').style.display = 'none';
@@ -830,6 +1000,37 @@
             grid.innerHTML = '';
 
             societies.forEach(society => {
+                // Get member count and financial stats
+                const members = JSON.parse(localStorage.getItem('societyMembers_' + society.id)) || [];
+                const invoices = JSON.parse(localStorage.getItem('societyInvoices_' + society.id)) || [];
+
+                // Calculate financial stats
+                let totalOutstanding = 0;
+                let paidThisMonth = 0;
+                let defaultersCount = 0;
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+
+                invoices.forEach(inv => {
+                    const amount = parseFloat(inv.total || 0);
+                    if (inv.paymentStatus !== 'paid') {
+                        totalOutstanding += amount;
+                        if (amount > 0) defaultersCount++;
+                    } else {
+                        // Check if paid this month
+                        if (inv.paidDate) {
+                            const paidDate = new Date(inv.paidDate);
+                            if (paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear) {
+                                paidThisMonth += amount;
+                            }
+                        }
+                    }
+                });
+
+                // Get last updated timestamp
+                const lastUpdated = society.dataLastSynced || society.createdAt;
+                const lastUpdatedText = formatRelativeTime(new Date(lastUpdated));
+
                 const card = document.createElement('div');
                 card.className = 'society-card';
                 card.innerHTML = `
@@ -841,16 +1042,24 @@
                     <div class="society-card-body">
                         <div class="society-info">
                             <div class="info-row">
-                                <span class="info-label">Units</span>
-                                <span class="info-value">${society.units || 0}</span>
+                                <span class="info-label">Total Members</span>
+                                <span class="info-value">${members.length}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">Members</span>
-                                <span class="info-value">${(JSON.parse(localStorage.getItem('societyMembers_' + society.id)) || []).length}</span>
+                                <span class="info-label">Outstanding Dues</span>
+                                <span class="info-value" style="color: ${totalOutstanding > 0 ? 'var(--danger)' : 'var(--success)'}">₹${totalOutstanding.toFixed(2)}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">Created</span>
-                                <span class="info-value">${new Date(society.createdAt).toLocaleDateString()}</span>
+                                <span class="info-label">Paid This Month</span>
+                                <span class="info-value" style="color: var(--success)">₹${paidThisMonth.toFixed(2)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Defaulters</span>
+                                <span class="info-value" style="color: ${defaultersCount > 0 ? 'var(--warning)' : 'var(--success)'}">${defaultersCount}</span>
+                            </div>
+                            <div class="info-row" style="border-bottom: none;">
+                                <span class="info-label">Last Updated</span>
+                                <span class="info-value" style="font-size: 0.85rem;">${lastUpdatedText}</span>
                             </div>
                         </div>
                         <div class="society-actions">
@@ -862,6 +1071,21 @@
                 `;
                 grid.appendChild(card);
             });
+        }
+
+        // Format relative time
+        function formatRelativeTime(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+            if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            return date.toLocaleDateString();
         }
 
         // Display empty state
@@ -882,11 +1106,33 @@
         // Update stats
         function updateStats(societies) {
             let totalMembers = 0;
+            let totalOutstanding = 0;
+            let collectedThisMonth = 0;
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
             societies.forEach(society => {
                 const members = JSON.parse(localStorage.getItem('societyMembers_' + society.id)) || [];
                 totalMembers += members.length;
+
+                const invoices = JSON.parse(localStorage.getItem('societyInvoices_' + society.id)) || [];
+                invoices.forEach(inv => {
+                    const amount = parseFloat(inv.total || 0);
+                    if (inv.paymentStatus !== 'paid') {
+                        totalOutstanding += amount;
+                    } else if (inv.paidDate) {
+                        const paidDate = new Date(inv.paidDate);
+                        if (paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear) {
+                            collectedThisMonth += amount;
+                        }
+                    }
+                });
             });
+
             document.getElementById('totalMembers').textContent = totalMembers;
+            document.getElementById('totalOutstanding').textContent = '₹' + totalOutstanding.toFixed(2);
+            document.getElementById('totalOutstanding').style.color = totalOutstanding > 0 ? 'var(--danger)' : 'var(--success)';
+            document.getElementById('collectedThisMonth').textContent = '₹' + collectedThisMonth.toFixed(2);
         }
 
         // Committee members array
