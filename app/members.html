@@ -768,6 +768,11 @@ corpus_weight:0.5"></textarea>
                 const details = detailParts.length ? detailParts.join(', ') : 'Standard';
                 const statusBg = member.status === 'active' ? '#d1fae5' : '#fee2e2';
                 const statusColor = member.status === 'active' ? '#065f46' : '#991b1b';
+
+                // Add email and SMS buttons if contact info exists
+                const emailButton = member.email ? `<button class="btn-small" onclick="sendEmailToResident(${member.id})" style="background: #3b82f6; color: white;" title="Send Email">📧</button>` : '';
+                const smsButton = member.phone ? `<button class="btn-small" onclick="sendSMSToResident(${member.id})" style="background: #10b981; color: white;" title="Send SMS">📱</button>` : '';
+
                 tableHTML += `
                     <tr>
                         <td><strong>${member.name}</strong></td>
@@ -777,6 +782,8 @@ corpus_weight:0.5"></textarea>
                         <td>${member.joinDate}</td>
                         <td>
                             <div class="action-buttons">
+                                ${emailButton}
+                                ${smsButton}
                                 <button class="btn-small btn-edit" onclick="editMember(${member.id})">Edit</button>
                                 <button class="btn-small btn-delete" onclick="deleteMember(${member.id})">Delete</button>
                             </div>
@@ -812,6 +819,69 @@ corpus_weight:0.5"></textarea>
             document.getElementById('totalMembers').textContent = members.length;
             document.getElementById('bhkMembers').textContent = members.filter(m => Number(m.bhk || 0) > 0).length;
             document.getElementById('sqftMembers').textContent = members.filter(m => Number(m.sqft || 0) > 0).length;
+        }
+
+        // Send email to resident using society email
+        function sendEmailToResident(memberId) {
+            const member = members.find(m => m.id === memberId);
+            if (!member) {
+                alert('Member not found');
+                return;
+            }
+
+            if (!member.email) {
+                alert('This member does not have an email address on file');
+                return;
+            }
+
+            // Get society email from settings
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            const societyEmail = settings.email;
+            const societyName = settings.societyName || 'Society';
+
+            if (!societyEmail) {
+                alert('Society email is not configured. Please go to Settings > Society Information to add your society email address.');
+                return;
+            }
+
+            // Create mailto link using society email as sender
+            const subject = encodeURIComponent(`Message from ${societyName}`);
+            const body = encodeURIComponent(`Dear ${member.name},\n\n[Your message here]\n\nBest regards,\n${societyName}\n${societyEmail}`);
+            const mailtoLink = `mailto:${member.email}?subject=${subject}&body=${body}`;
+
+            // Open email client
+            window.location.href = mailtoLink;
+        }
+
+        // Send SMS to resident using society phone
+        function sendSMSToResident(memberId) {
+            const member = members.find(m => m.id === memberId);
+            if (!member) {
+                alert('Member not found');
+                return;
+            }
+
+            if (!member.phone) {
+                alert('This member does not have a phone number on file');
+                return;
+            }
+
+            // Get society phone from settings
+            const settings = JSON.parse(localStorage.getItem('societySettings')) || {};
+            const societyPhone = settings.phone;
+            const societyName = settings.societyName || 'Society';
+
+            if (!societyPhone) {
+                alert('Society phone number is not configured. Please go to Settings > Society Information to add your society phone number.');
+                return;
+            }
+
+            // Create SMS link
+            const message = encodeURIComponent(`Message from ${societyName}:`);
+            const smsLink = `sms:${member.phone}?body=${message}`;
+
+            // Open SMS app
+            window.location.href = smsLink;
         }
 
         // Initial display

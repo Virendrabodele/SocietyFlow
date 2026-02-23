@@ -573,7 +573,7 @@
             <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg); border-radius: 6px;">
                 <span id="userRole" style="font-weight: 600; color: var(--primary);">Admin</span>
                 <span style="color: var(--text-light);">|</span>
-                <span id="userEmail" style="font-size: 0.9rem; color: var(--text-light);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ef9a9c8a9daf8a978e829f838ac18c8082">[email&#160;protected]</a></span>
+                <span id="userEmail" style="font-size: 0.9rem; color: var(--text-light);"></span>
             </div>
             <button class="logout-btn" onclick="handleLogout()">Logout</button>
         </div>
@@ -721,7 +721,6 @@
     </div>
 
     <script src="activity-tracker.js"></script>
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
     <script>
         const MASTER_EMAILS = ['masterdashboard@societyflow', 'masterdashboard@societyflow.com'];
         function isMasterUser(user) {
