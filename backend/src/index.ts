@@ -14,6 +14,7 @@ import billingRoutes from './routes/billing.routes';
 import invoiceRoutes from './routes/invoice.routes';
 import paymentRoutes from './routes/payment.routes';
 import reminderRoutes from './routes/reminder.routes';
+import residentRoutes from './routes/resident.routes';
 
 const app: Application = express();
 
@@ -60,6 +61,7 @@ app.use(`${apiPrefix}/societies`, billingRoutes);
 app.use(`${apiPrefix}/societies`, invoiceRoutes);
 app.use(`${apiPrefix}/societies`, paymentRoutes);
 app.use(`${apiPrefix}/societies`, reminderRoutes);
+app.use(`${apiPrefix}/resident`, residentRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
