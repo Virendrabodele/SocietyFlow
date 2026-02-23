@@ -1,0 +1,423 @@
+// This is your Prisma schema file for SocietyFlow
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+enum UserRole {
+  MASTER_ADMIN
+  SOCIETY_ADMIN
+  COMMITTEE_USER
+  RESIDENT
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  mobile       String?
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  societiesCreated Society[]        @relation("CreatedBySociety")
+  societyAccess    SocietyAccess[]
+  receiptsCreated  Receipt[]        @relation("CreatedByUser")
+  auditLogs        AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// ============================================
+// SOCIETY & ACCESS MANAGEMENT
+// ============================================
+
+model Society {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  city      String
+  state     String
+  units     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdByUserId String
+  createdBy       User   @relation("CreatedBySociety", fields: [createdByUserId], references: [id])
+
+  // Relations
+  societyAccess    SocietyAccess[]
+  members          Member[]
+  billingHeads     BillingHead[]
+  billingLineItems BillingLineItem[]
+  invoices         Invoice[]
+  payments         Payment[]
+  receipts         Receipt[]
+  notifications    Notification[]
+  integrations     Integration[]
+  auditLogs        AuditLog[]
+
+  @@index([code])
+  @@index([createdByUserId])
+}
+
+enum AccessRole {
+  ADMIN
+  COMMITTEE
+  VIEWER
+}
+
+model SocietyAccess {
+  id        String     @id @default(uuid())
+  societyId String
+  userId    String
+  society   Society    @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessRole      AccessRole
+  grantedByUserId String?
+  grantedAt       DateTime   @default(now())
+
+  @@unique([societyId, userId])
+  @@index([userId])
+  @@index([societyId])
+}
+
+// ============================================
+// MEMBER MANAGEMENT
+// ============================================
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  VACANT
+}
+
+model Member {
+  id        String       @id @default(uuid())
+  societyId String
+  society   Society      @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  name      String
+  unitNo    String
+  phone     String?
+  email     String?
+  status    MemberStatus @default(ACTIVE)
+
+  // Flexible variables for billing calculations
+  variables Json         @default("{}")
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  invoices      Invoice[]
+  notifications Notification[]
+
+  @@unique([societyId, unitNo])
+  @@index([societyId])
+  @@index([status])
+}
+
+// ============================================
+// BILLING CONFIGURATION
+// ============================================
+
+model BillingHead {
+  id        String   @id @default(uuid())
+  societyId String
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  name      String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  lineItems BillingLineItem[]
+
+  @@index([societyId])
+  @@index([isActive])
+}
+
+enum BasisType {
+  FLAT
+  PER_BHK
+  PER_SQFT
+  PER_WATER_READING
+  PER_DG_READING
+  PER_METER_READING
+  PER_CUSTOM_KEY
+  FORMULA
+}
+
+enum Frequency {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  ONE_TIME
+}
+
+model BillingLineItem {
+  id            String      @id @default(uuid())
+  billingHeadId String
+  billingHead   BillingHead @relation(fields: [billingHeadId], references: [id], onDelete: Cascade)
+
+  societyId String
+  society   Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  name        String
+  basisType   BasisType
+  rate        Float       @default(0)
+  customKey   String?     // For PER_CUSTOM_KEY basis
+  formulaText String?     // For FORMULA basis
+  frequency   Frequency   @default(MONTHLY)
+  taxable     Boolean     @default(false)
+  isActive    Boolean     @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([billingHeadId])
+  @@index([societyId])
+  @@index([isActive])
+}
+
+// ============================================
+// INVOICE MANAGEMENT
+// ============================================
+
+enum InvoiceStatus {
+  DRAFT
+  GENERATED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id        String        @id @default(uuid())
+  societyId String
+  society   Society       @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  periodMonth Int // 1-12
+  periodYear  Int
+
+  subtotal    Float
+  taxAmount   Float
+  totalAmount Float
+
+  status      InvoiceStatus @default(GENERATED)
+  generatedAt DateTime      @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  lineItems     InvoiceLineItem[]
+  payments      Payment[]
+  receipts      Receipt[]
+  notifications Notification[]
+
+  @@unique([societyId, memberId, periodMonth, periodYear])
+  @@index([societyId])
+  @@index([memberId])
+  @@index([status])
+  @@index([periodMonth, periodYear])
+}
+
+model InvoiceLineItem {
+  id        String  @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  lineItemName String
+  basisType    BasisType
+  units        Float
+  rate         Float
+  amount       Float
+
+  // Metadata for audit trail
+  meta Json @default("{}")
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+// ============================================
+// PAYMENT & RECEIPT MANAGEMENT
+// ============================================
+
+enum PaymentMode {
+  CASH
+  CHEQUE
+  BANK_TRANSFER
+  UPI
+  CARD
+  OTHER
+}
+
+model Payment {
+  id         String      @id @default(uuid())
+  societyId  String
+  society    Society     @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  invoiceId  String
+  invoice    Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amountPaid  Float
+  paidOn      DateTime
+  mode        PaymentMode
+  referenceNo String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+  @@index([invoiceId])
+  @@index([paidOn])
+}
+
+model Receipt {
+  id        String   @id @default(uuid())
+  societyId String
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  receiptNo      String
+  issuedOn       DateTime
+  fileUrl        String?
+  createdByUserId String
+  createdBy      User     @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([societyId, receiptNo])
+  @@index([societyId])
+  @@index([invoiceId])
+  @@index([issuedOn])
+}
+
+// ============================================
+// NOTIFICATION SYSTEM
+// ============================================
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+}
+
+model Notification {
+  id        String              @id @default(uuid())
+  societyId String
+  society   Society             @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  memberId String?
+  member   Member?             @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  channel     NotificationChannel
+  status      NotificationStatus  @default(PENDING)
+  providerRef String?             // Reference ID from email/SMS provider
+  sentAt      DateTime?
+  error       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([channel])
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  societyId  String?
+  society    Society? @relation(fields: [societyId], references: [id], onDelete: SetNull)
+
+  action     String   // login_success, login_failure, society_create, member_create, etc.
+  entityType String?  // user, society, member, invoice, etc.
+  entityId   String?
+
+  payload    Json     @default("{}")
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([societyId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+// ============================================
+// INTEGRATION MANAGEMENT
+// ============================================
+
+enum IntegrationType {
+  GOOGLE_SHEETS
+  EMAIL_SMTP
+  SMS_PROVIDER
+  PAYMENT_GATEWAY
+}
+
+model Integration {
+  id        String          @id @default(uuid())
+  societyId String
+  society   Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  type     IntegrationType
+  config   Json            @default("{}") // Encrypted if contains secrets
+  isActive Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+  @@index([type])
+  @@index([isActive])
+}
