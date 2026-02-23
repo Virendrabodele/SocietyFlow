@@ -7,7 +7,7 @@ export const createMemberSchema = z.object({
     phone: z.string().optional(),
     email: z.string().email('Invalid email address').optional(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'VACANT']).default('ACTIVE'),
-    variables: z.record(z.unknown()).optional(),
+    variables: z.record(z.string(), z.unknown()).optional(),
   }),
   params: z.object({
     id: z.string().uuid('Invalid society ID'),
@@ -21,7 +21,7 @@ export const updateMemberSchema = z.object({
     phone: z.string().optional(),
     email: z.string().email().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'VACANT']).optional(),
-    variables: z.record(z.unknown()).optional(),
+    variables: z.record(z.string(), z.unknown()).optional(),
   }),
   params: z.object({
     id: z.string().uuid('Invalid society ID'),
@@ -38,7 +38,7 @@ export const bulkCreateMembersSchema = z.object({
         phone: z.string().optional(),
         email: z.string().email().optional(),
         status: z.enum(['ACTIVE', 'INACTIVE', 'VACANT']).default('ACTIVE'),
-        variables: z.record(z.unknown()).optional(),
+        variables: z.record(z.string(), z.unknown()).optional(),
       })
     ),
   }),

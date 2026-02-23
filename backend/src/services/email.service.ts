@@ -11,7 +11,7 @@ export interface EmailOptions {
 export const sendEmail = async (options: EmailOptions): Promise<string> => {
   try {
     if (config.email.provider === 'smtp') {
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         host: config.email.smtp.host,
         port: config.email.smtp.port,
         secure: config.email.smtp.secure,

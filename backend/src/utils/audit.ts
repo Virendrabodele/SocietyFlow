@@ -20,7 +20,7 @@ export const createAuditLog = async (data: AuditLogData): Promise<void> => {
         action: data.action,
         entityType: data.entityType || null,
         entityId: data.entityId || null,
-        payload: data.payload || {},
+        payload: (data.payload || {}) as any,
       },
     });
   } catch (error) {
