@@ -16,7 +16,6 @@ import invoiceRoutes from './routes/invoice.routes';
 import complianceRoutes from './routes/compliance.routes';
 import reportsRoutes from './routes/reports.routes';
 import bankAccountRoutes from './routes/bank-account.routes';
-import complianceRoutes from './routes/compliance.routes';
 
 const app: Application = express();
 
@@ -58,7 +57,6 @@ app.use(`${apiPrefix}/societies`, invoiceRoutes);
 app.use(`${apiPrefix}/societies`, complianceRoutes);
 app.use(`${apiPrefix}/societies`, reportsRoutes);
 app.use(`${apiPrefix}/societies`, bankAccountRoutes);
-app.use(`${apiPrefix}`, complianceRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

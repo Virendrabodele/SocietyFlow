@@ -33,12 +33,12 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  societiesCreated              Society[]                @relation("CreatedBySociety")
-  societyAccess                 SocietyAccess[]
-  receiptsCreated               Receipt[]                @relation("CreatedByUser")
-  auditLogs                     AuditLog[]
-  paymentUploadsCreated         PaymentUploadReference[] @relation("UploadedByUser")
-  paymentUploadsVerified        PaymentUploadReference[] @relation("VerifiedByUser")
+  societiesCreated       Society[]                @relation("CreatedBySociety")
+  societyAccess          SocietyAccess[]
+  receiptsCreated        Receipt[]                @relation("CreatedByUser")
+  auditLogs              AuditLog[]
+  paymentUploadsCreated  PaymentUploadReference[] @relation("UploadedByUser")
+  paymentUploadsVerified PaymentUploadReference[] @relation("VerifiedByUser")
 
   @@index([email])
   @@index([role])
@@ -49,28 +49,27 @@ model User {
 // ============================================
 
 model Society {
-  id              String   @id @default(uuid())
-  name            String
-  code            String   @unique
-  city            String
-  state           String
-  units           Int
-  googleSheetId   String?  @unique
-  googleSheetUrl  String?
-  address         String?
-  registrationNo  String?
-  pan             String?
-  gstin           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  dataLastSynced  DateTime?
+  id             String    @id @default(uuid())
+  name           String
+  code           String    @unique
+  city           String
+  state          String
+  units          Int
+  googleSheetId  String?   @unique
+  googleSheetUrl String?
+  address        String?
+  registrationNo String?
 
   // India Compliance Fields
   registeredAddress String?
-  gstin             String?  @unique
+  gstin             String?
   pan               String?
   contactEmail      String?
   contactPhone      String?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  dataLastSynced DateTime?
 
   createdByUserId String
   createdBy       User   @relation("CreatedBySociety", fields: [createdByUserId], references: [id])
@@ -89,27 +88,14 @@ model Society {
   taxConfig           TaxConfig?
   invoiceSeriesConfig InvoiceSeriesConfig?
   receiptSeriesConfig ReceiptSeriesConfig?
-  monthEndSnapshots   MonthEndSnapshot[]
-  societyAccess    SocietyAccess[]
-  members          Member[]
-  billingHeads     BillingHead[]
-  billingLineItems BillingLineItem[]
-  invoices         Invoice[]
-  payments         Payment[]
-  receipts         Receipt[]
-  notifications    Notification[]
-  integrations     Integration[]
-  auditLogs        AuditLog[]
-  bankAccount      BankAccount?
-  taxConfigs       TaxConfig[]
-  receiptSequences ReceiptSequence[]
-  monthClosures    MonthClosure[]
-  ledgerEntries    LedgerEntry[]
+  bankAccount         BankAccount?
+  receiptSequences    ReceiptSequence[]
+  monthClosures       MonthClosure[]
+  ledgerEntries       LedgerEntry[]
 
   @@index([code])
   @@index([createdByUserId])
   @@index([googleSheetId])
-  @@index([gstin])
 }
 
 enum AccessRole {
@@ -222,12 +208,12 @@ model BillingLineItem {
   name        String
   basisType   BasisType
   rate        Float       @default(0)
-  customKey   String?     // For PER_CUSTOM_KEY basis
-  formulaText String?     // For FORMULA basis
+  customKey   String?
+  formulaText String?
   frequency   Frequency   @default(MONTHLY)
   taxable     Boolean     @default(false)
-  taxRate     Float       @default(0) // Tax rate percentage (e.g., 5, 18)
-  sacHsnCode  String?     // SAC/HSN code for tax compliance
+  taxRate     Float       @default(0)
+  sacHsnCode  String?
   isActive    Boolean     @default(true)
 
   createdAt DateTime @default(now())
@@ -260,12 +246,11 @@ model Invoice {
   memberId String
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  // Invoice compliance fields
-  invoiceNo   String? // Unique invoice number
-  invoiceDate DateTime? // Date of invoice issue
-  dueDate     DateTime? // Payment due date
+  invoiceNo   String?
+  invoiceDate DateTime  @default(now())
+  dueDate     DateTime?
 
-  periodMonth Int // 1-12
+  periodMonth Int
   periodYear  Int
 
   subtotal       Float
@@ -276,53 +261,30 @@ model Invoice {
   taxAmount      Float
   roundingAmount Float   @default(0)
   totalAmount    Float
-  // Invoice details
-  invoiceNo   String?
-  invoiceDate DateTime @default(now())
-  dueDate     DateTime?
 
-  // Amounts
-  subtotal    Float
-  taxAmount   Float
-  roundOff    Float   @default(0)
-  totalAmount Float
-
-  // GST breakdown
-  cgstAmount Float @default(0)
-  sgstAmount Float @default(0)
-  igstAmount Float @default(0)
-
-  // Payment tracking
-  amountPaid      Float @default(0)
-  balanceAmount   Float @default(0)
+  amountPaid    Float @default(0)
+  balanceAmount Float @default(0)
 
   status      InvoiceStatus @default(GENERATED)
-  isLocked    Boolean       @default(false) // Lock invoice after issue
-  generatedAt DateTime      @default(now())
+  isLocked    Boolean       @default(false)
 
-  // Terms and conditions
-  termsAndConditions String?
+  termsAndConditions  String?
   paymentInstructions String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  lineItems         InvoiceLineItem[]
-  payments          Payment[]
-  receipts          Receipt[]
-  notifications     Notification[]
-  paymentUploads    PaymentUploadReference[]
-  lineItems     InvoiceLineItem[]
-  taxLines      InvoiceTaxLine[]
-  payments      Payment[]
-  receipts      Receipt[]
-  notifications Notification[]
-  ledgerEntries LedgerEntry[]
+  lineItems      InvoiceLineItem[]
+  taxLines       InvoiceTaxLine[]
+  payments       Payment[]
+  receipts       Receipt[]
+  notifications  Notification[]
+  paymentUploads PaymentUploadReference[]
+  ledgerEntries  LedgerEntry[]
 
   @@unique([societyId, invoiceNo])
   @@unique([societyId, memberId, periodMonth, periodYear])
-  @@unique([societyId, invoiceNo])
   @@index([societyId])
   @@index([memberId])
   @@index([status])
@@ -341,19 +303,14 @@ model InvoiceLineItem {
   rate         Float
   amount       Float
 
-  // Tax fields
-  taxable    Boolean @default(false)
-  taxRate    Float   @default(0)
-  sacHsnCode String?
-  // GST details per line item
-  taxable    Boolean @default(false)
-  gstRate    Float   @default(0)
-  cgstAmount Float   @default(0)
-  sgstAmount Float   @default(0)
-  igstAmount Float   @default(0)
-  totalWithTax Float @default(0)
+  taxable      Boolean @default(false)
+  taxRate      Float   @default(0)
+  sacHsnCode   String?
+  cgstAmount   Float   @default(0)
+  sgstAmount   Float   @default(0)
+  igstAmount   Float   @default(0)
+  totalWithTax Float   @default(0)
 
-  // Metadata for audit trail
   meta Json @default("{}")
 
   createdAt DateTime @default(now())
@@ -375,12 +332,12 @@ enum PaymentMode {
 }
 
 model Payment {
-  id         String      @id @default(uuid())
-  societyId  String
-  society    Society     @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  id        String      @id @default(uuid())
+  societyId String
+  society   Society     @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
-  invoiceId  String
-  invoice    Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   amountPaid  Float
   paidOn      DateTime
@@ -410,15 +367,15 @@ model Receipt {
   invoiceId String
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  receiptNo        String
-  amountReceived   Float // Amount covered by this receipt
-  status           ReceiptStatus @default(FINAL)
-  issuedOn         DateTime
-  cancelledOn      DateTime?
+  receiptNo          String
+  amountReceived     Float
+  status             ReceiptStatus @default(FINAL)
+  issuedOn           DateTime
+  cancelledOn        DateTime?
   cancellationReason String?
-  fileUrl          String?
-  createdByUserId  String
-  createdBy        User     @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+  fileUrl            String?
+  createdByUserId    String
+  createdBy          User          @relation("CreatedByUser", fields: [createdByUserId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -459,7 +416,7 @@ model Notification {
 
   channel     NotificationChannel
   status      NotificationStatus  @default(PENDING)
-  providerRef String?             // Reference ID from email/SMS provider
+  providerRef String?
   sentAt      DateTime?
   error       String?
 
@@ -477,29 +434,25 @@ model Notification {
 // ============================================
 
 model AuditLog {
-  id         String   @id @default(uuid())
+  id        String   @id @default(uuid())
 
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  societyId  String?
-  society    Society? @relation(fields: [societyId], references: [id], onDelete: SetNull)
+  societyId String?
+  society   Society? @relation(fields: [societyId], references: [id], onDelete: SetNull)
 
-  action     String   // login_success, login_failure, society_create, member_create, etc.
-  entityType String?  // user, society, member, invoice, etc.
+  action     String
+  entityType String?
   entityId   String?
 
-  payload       Json     @default("{}")
-  beforeSnapshot Json?   // State before change
-  afterSnapshot  Json?   // State after change
+  payload        Json    @default("{}")
+  beforeSnapshot Json?
+  afterSnapshot  Json?
   sourceIp       String?
   userAgent      String?
 
-  // Compliance tracking fields
-  ipAddress  String?
-  userAgent  String?
-
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([societyId])
@@ -525,7 +478,7 @@ model Integration {
   society   Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
   type     IntegrationType
-  config   Json            @default("{}") // Encrypted if contains secrets
+  config   Json            @default("{}")
   isActive Boolean         @default(true)
 
   createdAt DateTime @default(now())
@@ -541,8 +494,8 @@ model Integration {
 // ============================================
 
 enum TaxRegime {
-  CGST_SGST // Intra-state (Central + State GST)
-  IGST      // Inter-state (Integrated GST)
+  CGST_SGST
+  IGST
 }
 
 model TaxConfig {
@@ -550,13 +503,20 @@ model TaxConfig {
   societyId String     @unique
   society   Society    @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
-  gstEnabled      Boolean    @default(false)
+  gstEnabled      Boolean   @default(false)
   gstin           String?
-  taxRegime       TaxRegime  @default(CGST_SGST)
-  defaultTaxRate  Float      @default(18) // Default tax rate percentage
-  taxThreshold    Float?     // Optional threshold for tax applicability
-  roundingPolicy  String     @default("NEAREST_RUPEE") // NEAREST_RUPEE, TWO_DECIMALS
+  taxRegime       TaxRegime @default(CGST_SGST)
+  defaultTaxRate  Float     @default(18)
+  taxThreshold    Float?
+  roundingPolicy  String    @default("NEAREST_RUPEE")
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+}
+
+// ============================================
 // BANK ACCOUNT MANAGEMENT
 // ============================================
 
@@ -580,19 +540,22 @@ model BankAccount {
   @@index([societyId])
 }
 
+// ============================================
+// INVOICE & RECEIPT SERIES CONFIGURATION
+// ============================================
+
 model InvoiceSeriesConfig {
   id        String  @id @default(uuid())
   societyId String  @unique
   society   Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
-  prefix          String  @default("INV") // e.g., INV, INVOICE
+  prefix          String  @default("INV")
   includeYear     Boolean @default(true)
   includeSocCode  Boolean @default(true)
   separator       String  @default("/")
   currentSequence Int     @default(0)
   resetOnNewYear  Boolean @default(true)
 
-  // Example format: INV/SOCIETY123/2024-25/0001
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -604,14 +567,13 @@ model ReceiptSeriesConfig {
   societyId String  @unique
   society   Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
-  prefix          String  @default("RCPT") // e.g., RCPT, RECEIPT
+  prefix          String  @default("RCPT")
   includeYear     Boolean @default(true)
   includeSocCode  Boolean @default(true)
   separator       String  @default("/")
   currentSequence Int     @default(0)
   resetOnNewYear  Boolean @default(true)
 
-  // Example format: RCPT/SOCIETY123/2024-25/0001
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -623,8 +585,8 @@ model InvoiceTaxLine {
   invoiceId String
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  taxRate      Float  // Tax rate percentage (e.g., 5, 18)
-  taxableValue Float  // Taxable amount for this rate
+  taxRate      Float
+  taxableValue Float
   cgst         Float  @default(0)
   sgst         Float  @default(0)
   igst         Float  @default(0)
@@ -633,10 +595,6 @@ model InvoiceTaxLine {
   createdAt DateTime @default(now())
 
   @@index([invoiceId])
-}
-
-model MonthEndSnapshot {
-  @@index([isActive])
 }
 
 // ============================================
@@ -668,38 +626,23 @@ model PaymentUploadReference {
   verifiedBy         User?              @relation("VerifiedByUser", fields: [verifiedByUserId], references: [id])
   verifiedAt         DateTime?
   verificationNotes  String?
-// INDIA COMPLIANCE MODULE
-// ============================================
-
-// GST and Tax Configuration
-model TaxConfig {
-  id        String   @id @default(uuid())
-  societyId String
-  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
-
-  gstEnabled       Boolean @default(false)
-  defaultGstRate   Float   @default(18)
-  placeOfSupply    String  // State name
-  isInterState     Boolean @default(false)
-
-  // Item-wise overrides stored as JSON
-  itemTaxRates     Json    @default("{}")
-
-  // Exemption policies
-  exemptionThreshold Float? @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([societyId])
-  @@index([societyId])
+  @@index([invoiceId])
+  @@index([uploadedByUserId])
+  @@index([verificationStatus])
 }
 
-// Receipt Sequence Configuration
+// ============================================
+// RECEIPT SEQUENCE (India FY-aware numbering)
+// ============================================
+
 enum ReceiptNumberFormat {
-  FY_SOC_SEQ      // RCPT/{FY}/{SOC}/{####}
-  SOC_YEAR_MONTH  // SOC-{YYYY}-{MM}-{SEQ}
-  CUSTOM          // Custom format
+  FY_SOC_SEQ
+  SOC_YEAR_MONTH
+  CUSTOM
 }
 
 model ReceiptSequence {
@@ -708,23 +651,24 @@ model ReceiptSequence {
   society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
   format         ReceiptNumberFormat @default(FY_SOC_SEQ)
-  customFormat   String?              // Template string
-  prefix         String               @default("RCPT")
-  currentSeq     Int                  @default(0)
-  financialYear  String               // e.g., "2025-26"
-  resetOnNewFY   Boolean              @default(true)
+  customFormat   String?
+  prefix         String              @default("RCPT")
+  currentSeq     Int                 @default(0)
+  financialYear  String
+  resetOnNewFY   Boolean             @default(true)
 
-  // For concurrency control
-  lastUpdatedAt  DateTime @default(now())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  lastUpdatedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([societyId, financialYear])
   @@index([societyId])
 }
 
-// Month-End Closure/Lock Management
+// ============================================
+// MONTH-END CLOSURE MANAGEMENT
+// ============================================
+
 enum MonthClosureStatus {
   DRAFT
   REVIEWED
@@ -737,63 +681,37 @@ model MonthClosure {
   societyId String
   society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
-  periodMonth Int // 1-12
+  periodMonth Int
   periodYear  Int
 
-  // Summary data
-  totalBilled       Float
-  totalCollected    Float
-  totalPending      Float
-  totalTaxCollected Float
+  status MonthClosureStatus @default(DRAFT)
 
-  // Detailed breakdown stored as JSON
-  headWiseCollection   Json @default("{}")
-  memberWiseOutstanding Json @default("{}")
-  taxSummary           Json @default("{}")
-  collectionModeSummary Json @default("{}")
-
-  generatedAt DateTime @default(now())
-  createdAt   DateTime @default(now())
-
-  @@unique([societyId, periodMonth, periodYear])
-  @@index([societyId])
-  @@index([periodMonth, periodYear])
-}
-
-  periodMonth Int      // 1-12
-  periodYear  Int
-
-  status      MonthClosureStatus @default(DRAFT)
-
-  // Lock tracking
-  lockedAt    DateTime?
-  lockedBy    String?   // User ID who locked
+  lockedAt     DateTime?
+  lockedBy     String?
   unlockReason String?
 
-  // Approval workflow
-  reviewedAt  DateTime?
-  reviewedBy  String?   // User ID
-  approvedAt  DateTime?
-  approvedBy  String?   // User ID
+  reviewedAt DateTime?
+  reviewedBy String?
+  approvedAt DateTime?
+  approvedBy String?
 
-  // Summary data (cached for reporting)
-  totalBilled    Float @default(0)
-  totalCollected Float @default(0)
+  totalBilled      Float @default(0)
+  totalCollected   Float @default(0)
   totalOutstanding Float @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([invoiceId])
-  @@index([uploadedByUserId])
-  @@index([verificationStatus])
   @@unique([societyId, periodMonth, periodYear])
   @@index([societyId])
   @@index([status])
   @@index([periodMonth, periodYear])
 }
 
-// Ledger Entries for Double-Entry Bookkeeping
+// ============================================
+// LEDGER ENTRIES (Double-Entry Bookkeeping)
+// ============================================
+
 enum LedgerEntryType {
   DEBIT
   CREDIT
@@ -815,24 +733,19 @@ model LedgerEntry {
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
-  memberId  String?  // Optional: for member-specific entries
+  memberId String?
 
   entryType       LedgerEntryType
   transactionType TransactionType
   amount          Float
   description     String
 
-  // Accounting heads
-  accountHead     String  // e.g., "Maintenance", "Water Charges", "Bank", "Cash"
-  
-  // Date tracking
+  accountHead     String
   transactionDate DateTime
-  
-  // Reference tracking
   referenceNo     String?
-  
+
   createdAt DateTime @default(now())
-  
+
   @@index([societyId])
   @@index([invoiceId])
   @@index([transactionDate])
