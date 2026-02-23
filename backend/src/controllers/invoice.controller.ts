@@ -239,6 +239,30 @@ export const getInvoiceDetails = async (req: AuthRequest, res: Response): Promis
         receipts: {
           orderBy: { issuedOn: 'desc' },
         },
+        paymentUploads: {
+          include: {
+            uploadedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            verifiedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        society: {
+          include: {
+            bankAccount: true,
+          },
+        },
       },
     });
 
