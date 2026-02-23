@@ -4,11 +4,11 @@ import { z } from 'zod';
 export const createTaxConfigSchema = z.object({
   body: z.object({
     gstEnabled: z.boolean().default(false),
-    defaultGstRate: z.number().min(0).max(100).default(18),
-    placeOfSupply: z.string().min(1, 'Place of supply is required'),
-    isInterState: z.boolean().default(false),
-    itemTaxRates: z.record(z.string(), z.number().min(0).max(100)).optional(),
-    exemptionThreshold: z.number().min(0).optional(),
+    gstin: z.string().length(15).optional(),
+    taxRegime: z.enum(['CGST_SGST', 'IGST']).default('CGST_SGST'),
+    defaultTaxRate: z.number().min(0).max(100).default(18),
+    taxThreshold: z.number().min(0).optional(),
+    roundingPolicy: z.enum(['NEAREST_RUPEE', 'TWO_DECIMALS']).default('NEAREST_RUPEE'),
   }),
   params: z.object({
     id: z.string().uuid('Invalid society ID'),
@@ -18,11 +18,11 @@ export const createTaxConfigSchema = z.object({
 export const updateTaxConfigSchema = z.object({
   body: z.object({
     gstEnabled: z.boolean().optional(),
-    defaultGstRate: z.number().min(0).max(100).optional(),
-    placeOfSupply: z.string().min(1).optional(),
-    isInterState: z.boolean().optional(),
-    itemTaxRates: z.record(z.string(), z.number().min(0).max(100)).optional(),
-    exemptionThreshold: z.number().min(0).optional(),
+    gstin: z.string().length(15).optional(),
+    taxRegime: z.enum(['CGST_SGST', 'IGST']).optional(),
+    defaultTaxRate: z.number().min(0).max(100).optional(),
+    taxThreshold: z.number().min(0).optional(),
+    roundingPolicy: z.enum(['NEAREST_RUPEE', 'TWO_DECIMALS']).optional(),
   }),
   params: z.object({
     id: z.string().uuid('Invalid society ID'),

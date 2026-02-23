@@ -1,8 +1,10 @@
 import { Response } from 'express';
 import { getPrismaClient } from '../config/database';
+import { MonthClosureStatus } from '../generated/prisma';
 import { sendSuccessResponse, sendErrorResponse, AppError } from '../utils/response';
 import { createAuditLog } from '../utils/audit';
 import { AuthRequest } from '../middleware/auth';
+import { validateGSTIN, validatePAN } from '../utils/validation';
 import {
   getTaxConfig,
   updateTaxConfig,
@@ -15,6 +17,11 @@ import {
   getReceiptSeriesConfig,
   updateReceiptSeriesConfig,
 } from '../services/receipt-series.service';
+import {
+  generateReceiptNumber,
+  configureReceiptSequence,
+  getCurrentFinancialYear,
+} from '../services/receipt-sequence.service';
 
 // ============================================
 // TAX CONFIGURATION
@@ -24,29 +31,6 @@ export const getTaxConfiguration = async (req: AuthRequest, res: Response): Prom
   try {
     const societyId = req.params.id as string;
     const taxConfig = await getTaxConfig(societyId);
-import { validateGSTIN, validatePAN } from '../utils/validation';
-import {
-  generateReceiptNumber,
-  configureReceiptSequence,
-  getCurrentFinancialYear,
-} from '../services/receipt-sequence.service';
-
-/**
- * Get Tax Configuration for a society
- */
-export const getTaxConfig = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const societyId = req.params.id;
-    const prisma = getPrismaClient();
-
-    const taxConfig = await prisma.taxConfig.findUnique({
-      where: { societyId },
-    });
-
-    if (!taxConfig) {
-      throw new AppError('Tax configuration not found', 404);
-    }
-
     sendSuccessResponse(res, taxConfig, 'Tax configuration retrieved successfully');
   } catch (error) {
     sendErrorResponse(res, error);
@@ -56,12 +40,6 @@ export const getTaxConfig = async (req: AuthRequest, res: Response): Promise<voi
 export const updateTaxConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const societyId = req.params.id as string;
-/**
- * Create or Update Tax Configuration
- */
-export const upsertTaxConfig = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const societyId = req.params.id;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -70,9 +48,6 @@ export const upsertTaxConfig = async (req: AuthRequest, res: Response): Promise<
 
     const { gstEnabled, gstin, taxRegime, defaultTaxRate, taxThreshold, roundingPolicy } = req.body;
 
-    const prisma = getPrismaClient();
-
-    // Get old config for audit
     const oldConfig = await getTaxConfig(societyId);
 
     const taxConfig = await updateTaxConfig(societyId, {
@@ -82,49 +57,8 @@ export const upsertTaxConfig = async (req: AuthRequest, res: Response): Promise<
       defaultTaxRate,
       taxThreshold,
       roundingPolicy,
-    const {
-      gstEnabled,
-      defaultGstRate,
-      placeOfSupply,
-      isInterState,
-      itemTaxRates,
-      exemptionThreshold,
-    } = req.body;
-
-    const prisma = getPrismaClient();
-
-    // Check if society exists
-    const society = await prisma.society.findUnique({
-      where: { id: societyId },
     });
 
-    if (!society) {
-      throw new AppError('Society not found', 404);
-    }
-
-    // Upsert tax configuration
-    const taxConfig = await prisma.taxConfig.upsert({
-      where: { societyId },
-      create: {
-        societyId,
-        gstEnabled: gstEnabled ?? false,
-        defaultGstRate: defaultGstRate ?? 18,
-        placeOfSupply,
-        isInterState: isInterState ?? false,
-        itemTaxRates: itemTaxRates || {},
-        exemptionThreshold: exemptionThreshold || 0,
-      },
-      update: {
-        gstEnabled,
-        defaultGstRate,
-        placeOfSupply,
-        isInterState,
-        itemTaxRates,
-        exemptionThreshold,
-      },
-    });
-
-    // Create audit log
     await createAuditLog({
       userId,
       societyId,
@@ -132,31 +66,23 @@ export const upsertTaxConfig = async (req: AuthRequest, res: Response): Promise<
       entityType: 'tax_config',
       entityId: taxConfig.id,
       payload: { gstEnabled, gstin, taxRegime, defaultTaxRate },
+      beforeSnapshot: oldConfig,
+      afterSnapshot: taxConfig,
     });
 
     sendSuccessResponse(res, taxConfig, 'Tax configuration updated successfully');
-      payload: { gstEnabled, defaultGstRate, placeOfSupply },
-    });
-
-    sendSuccessResponse(res, taxConfig, 'Tax configuration saved successfully');
   } catch (error) {
     sendErrorResponse(res, error);
   }
 };
 
+// Aliases for compliance routes (version 2 naming)
+export const getTaxConfigHandler = getTaxConfiguration;
+
 // ============================================
-// INVOICE SERIES CONFIGURATION
+// SOCIETY COMPLIANCE INFORMATION
 // ============================================
 
-export const getInvoiceSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const societyId = req.params.id as string;
-    const config = await getInvoiceSeriesConfig(societyId);
-
-    sendSuccessResponse(res, config, 'Invoice series configuration retrieved successfully');
-/**
- * Update Society Compliance Information
- */
 export const updateSocietyCompliance = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const societyId = req.params.id;
@@ -168,12 +94,10 @@ export const updateSocietyCompliance = async (req: AuthRequest, res: Response): 
 
     const { registeredAddress, gstin, pan, contactEmail, contactPhone } = req.body;
 
-    // Validate GSTIN if provided
     if (gstin && !validateGSTIN(gstin)) {
       throw new AppError('Invalid GSTIN format', 400);
     }
 
-    // Validate PAN if provided
     if (pan && !validatePAN(pan)) {
       throw new AppError('Invalid PAN format', 400);
     }
@@ -191,7 +115,6 @@ export const updateSocietyCompliance = async (req: AuthRequest, res: Response): 
       },
     });
 
-    // Create audit log
     await createAuditLog({
       userId,
       societyId,
@@ -207,17 +130,23 @@ export const updateSocietyCompliance = async (req: AuthRequest, res: Response): 
   }
 };
 
-export const updateInvoiceSeriesConfiguration = async (
-/**
- * Configure Receipt Sequence
- */
-export const configureReceiptSequenceHandler = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+// ============================================
+// INVOICE SERIES CONFIGURATION
+// ============================================
+
+export const getInvoiceSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const societyId = req.params.id as string;
-    const societyId = req.params.id;
+    const config = await getInvoiceSeriesConfig(societyId);
+    sendSuccessResponse(res, config, 'Invoice series configuration retrieved successfully');
+  } catch (error) {
+    sendErrorResponse(res, error);
+  }
+};
+
+export const updateInvoiceSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const societyId = req.params.id as string;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -232,16 +161,8 @@ export const configureReceiptSequenceHandler = async (
       includeSocCode,
       separator,
       resetOnNewYear,
-    const { format, customFormat, prefix, resetOnNewFY } = req.body;
-
-    await configureReceiptSequence(societyId, {
-      format,
-      customFormat,
-      prefix,
-      resetOnNewFY,
     });
 
-    // Create audit log
     await createAuditLog({
       userId,
       societyId,
@@ -252,12 +173,6 @@ export const configureReceiptSequenceHandler = async (
     });
 
     sendSuccessResponse(res, config, 'Invoice series configuration updated successfully');
-      action: 'receipt_sequence_config',
-      entityType: 'receipt_sequence',
-      payload: { format, prefix },
-    });
-
-    sendSuccessResponse(res, { success: true }, 'Receipt sequence configured successfully');
   } catch (error) {
     sendErrorResponse(res, error);
   }
@@ -271,11 +186,50 @@ export const getReceiptSeriesConfiguration = async (req: AuthRequest, res: Respo
   try {
     const societyId = req.params.id as string;
     const config = await getReceiptSeriesConfig(societyId);
-
     sendSuccessResponse(res, config, 'Receipt series configuration retrieved successfully');
-/**
- * Get Receipt Sequence Configuration
- */
+  } catch (error) {
+    sendErrorResponse(res, error);
+  }
+};
+
+export const updateReceiptSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const societyId = req.params.id as string;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new AppError('Authentication required', 401);
+    }
+
+    const { prefix, includeYear, includeSocCode, separator, resetOnNewYear } = req.body;
+
+    const config = await updateReceiptSeriesConfig(societyId, {
+      prefix,
+      includeYear,
+      includeSocCode,
+      separator,
+      resetOnNewYear,
+    });
+
+    await createAuditLog({
+      userId,
+      societyId,
+      action: 'receipt_series_config_update',
+      entityType: 'receipt_series_config',
+      entityId: config.id,
+      payload: { prefix, includeYear, includeSocCode },
+    });
+
+    sendSuccessResponse(res, config, 'Receipt series configuration updated successfully');
+  } catch (error) {
+    sendErrorResponse(res, error);
+  }
+};
+
+// ============================================
+// RECEIPT SEQUENCE (India FY-aware numbering)
+// ============================================
+
 export const getReceiptSequenceConfig = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const societyId = req.params.id;
@@ -302,29 +256,52 @@ export const getReceiptSequenceConfig = async (req: AuthRequest, res: Response):
   }
 };
 
-export const updateReceiptSeriesConfiguration = async (
-/**
- * Generate Next Receipt Number (for preview)
- */
-export const generateReceiptNumberHandler = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const configureReceiptSequenceHandler = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const societyId = req.params.id as string;
     const societyId = req.params.id;
+    const userId = req.user?.userId;
 
+    if (!userId) {
+      throw new AppError('Authentication required', 401);
+    }
+
+    const { format, customFormat, prefix, resetOnNewFY } = req.body;
+
+    await configureReceiptSequence(societyId, {
+      format,
+      customFormat,
+      prefix,
+      resetOnNewFY,
+    });
+
+    await createAuditLog({
+      userId,
+      societyId,
+      action: 'receipt_sequence_config',
+      entityType: 'receipt_sequence',
+      payload: { format, prefix },
+    });
+
+    sendSuccessResponse(res, { success: true }, 'Receipt sequence configured successfully');
+  } catch (error) {
+    sendErrorResponse(res, error);
+  }
+};
+
+export const generateReceiptNumberHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const societyId = req.params.id;
     const result = await generateReceiptNumber({ societyId });
-
     sendSuccessResponse(res, result, 'Receipt number generated successfully');
   } catch (error) {
     sendErrorResponse(res, error);
   }
 };
 
-/**
- * Create or Get Month Closure
- */
+// ============================================
+// MONTH CLOSURE MANAGEMENT
+// ============================================
+
 export const upsertMonthClosure = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const societyId = req.params.id;
@@ -334,21 +311,10 @@ export const upsertMonthClosure = async (req: AuthRequest, res: Response): Promi
       throw new AppError('Authentication required', 401);
     }
 
-    const { prefix, includeYear, includeSocCode, separator, resetOnNewYear } = req.body;
-
-    const config = await updateReceiptSeriesConfig(societyId, {
-      prefix,
-      includeYear,
-      includeSocCode,
-      separator,
-      resetOnNewYear,
-    });
-
     const { periodMonth, periodYear, status } = req.body;
 
     const prisma = getPrismaClient();
 
-    // Check if closure exists
     const existing = await prisma.monthClosure.findUnique({
       where: {
         societyId_periodMonth_periodYear: {
@@ -362,13 +328,11 @@ export const upsertMonthClosure = async (req: AuthRequest, res: Response): Promi
     let monthClosure;
 
     if (existing) {
-      // Update existing
       monthClosure = await prisma.monthClosure.update({
         where: { id: existing.id },
         data: { status },
       });
     } else {
-      // Create new closure
       monthClosure = await prisma.monthClosure.create({
         data: {
           societyId,
@@ -379,17 +343,9 @@ export const upsertMonthClosure = async (req: AuthRequest, res: Response): Promi
       });
     }
 
-    // Create audit log
     await createAuditLog({
       userId,
       societyId,
-      action: 'receipt_series_config_update',
-      entityType: 'receipt_series_config',
-      entityId: config.id,
-      payload: { prefix, includeYear, includeSocCode },
-    });
-
-    sendSuccessResponse(res, config, 'Receipt series configuration updated successfully');
       action: 'month_closure_create',
       entityType: 'month_closure',
       entityId: monthClosure.id,
@@ -402,9 +358,6 @@ export const upsertMonthClosure = async (req: AuthRequest, res: Response): Promi
   }
 };
 
-/**
- * Update Month Closure Status (Lock/Unlock)
- */
 export const updateMonthClosureStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id: societyId, closureId } = req.params;
@@ -426,13 +379,20 @@ export const updateMonthClosureStatus = async (req: AuthRequest, res: Response):
       throw new AppError('Month closure not found', 404);
     }
 
-    // Validate status transitions
     if (status === 'LOCKED' && closure.status === 'LOCKED') {
       throw new AppError('Month is already locked', 400);
     }
 
-    // Build update data
-    const updateData: any = { status };
+    const updateData: {
+      status: MonthClosureStatus;
+      lockedAt?: Date;
+      lockedBy?: string;
+      unlockReason?: string;
+      reviewedAt?: Date;
+      reviewedBy?: string;
+      approvedAt?: Date;
+      approvedBy?: string;
+    } = { status: status as MonthClosureStatus };
 
     if (status === 'LOCKED') {
       updateData.lockedAt = new Date();
@@ -458,7 +418,6 @@ export const updateMonthClosureStatus = async (req: AuthRequest, res: Response):
       data: updateData,
     });
 
-    // Create audit log
     await createAuditLog({
       userId,
       societyId,
@@ -474,9 +433,6 @@ export const updateMonthClosureStatus = async (req: AuthRequest, res: Response):
   }
 };
 
-/**
- * Get Month Closures for a society
- */
 export const getMonthClosures = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const societyId = req.params.id;
@@ -493,9 +449,10 @@ export const getMonthClosures = async (req: AuthRequest, res: Response): Promise
   }
 };
 
-/**
- * Get Audit Logs with Filters
- */
+// ============================================
+// AUDIT LOGS
+// ============================================
+
 export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const societyId = req.params.id;
@@ -503,7 +460,13 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
 
     const prisma = getPrismaClient();
 
-    const where: any = { societyId };
+    const where: {
+      societyId: string;
+      action?: string;
+      entityType?: string;
+      userId?: string;
+      createdAt?: { gte?: Date; lte?: Date };
+    } = { societyId };
 
     if (action) {
       where.action = action;
@@ -518,13 +481,14 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     if (startDate || endDate) {
-      where.createdAt = {};
+      const dateFilter: { gte?: Date; lte?: Date } = {};
       if (startDate) {
-        where.createdAt.gte = new Date(startDate);
+        dateFilter.gte = new Date(startDate as string);
       }
       if (endDate) {
-        where.createdAt.lte = new Date(endDate);
+        dateFilter.lte = new Date(endDate as string);
       }
+      where.createdAt = dateFilter;
     }
 
     const auditLogs = await prisma.auditLog.findMany({
@@ -540,7 +504,7 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: 100, // Limit to recent 100 entries
+      take: 100,
     });
 
     sendSuccessResponse(res, auditLogs, 'Audit logs retrieved successfully');

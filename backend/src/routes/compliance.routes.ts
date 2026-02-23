@@ -1,35 +1,15 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
-import { verifySocietyAccess } from '../middleware/society-access';
-import {
-  getTaxConfiguration,
-  updateTaxConfiguration,
-  getInvoiceSeriesConfiguration,
-  updateInvoiceSeriesConfiguration,
-  getReceiptSeriesConfiguration,
-  updateReceiptSeriesConfiguration,
-} from '../controllers/compliance.controller';
-
-const router = Router({ mergeParams: true });
-
-// Tax configuration
-router.get('/:id/tax/config', authenticate, verifySocietyAccess, getTaxConfiguration);
-router.post('/:id/tax/config', authenticate, verifySocietyAccess, updateTaxConfiguration);
-
-// Invoice series configuration
-router.get('/:id/invoice-series/config', authenticate, verifySocietyAccess, getInvoiceSeriesConfiguration);
-router.post('/:id/invoice-series/config', authenticate, verifySocietyAccess, updateInvoiceSeriesConfiguration);
-
-// Receipt series configuration
-router.get('/:id/receipt-series/config', authenticate, verifySocietyAccess, getReceiptSeriesConfiguration);
-router.post('/:id/receipt-series/config', authenticate, verifySocietyAccess, updateReceiptSeriesConfiguration);
 import { authenticate, authorize } from '../middleware/auth';
 import { verifySocietyAccess } from '../middleware/society-access';
 import { validate } from '../middleware/validation';
 import {
-  getTaxConfig,
-  upsertTaxConfig,
+  getTaxConfiguration,
+  updateTaxConfiguration,
   updateSocietyCompliance,
+  getInvoiceSeriesConfiguration,
+  updateInvoiceSeriesConfiguration,
+  getReceiptSeriesConfiguration,
+  updateReceiptSeriesConfiguration,
   configureReceiptSequenceHandler,
   getReceiptSequenceConfig,
   generateReceiptNumberHandler,
@@ -52,86 +32,86 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// Tax Configuration Routes
-router.get(
-  '/societies/:id/tax-config',
-  verifySocietyAccess,
-  getTaxConfig
-);
-
+// Tax configuration
+router.get('/:id/tax/config', verifySocietyAccess, getTaxConfiguration);
 router.post(
-  '/societies/:id/tax-config',
+  '/:id/tax/config',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
   validate(createTaxConfigSchema),
-  upsertTaxConfig
+  updateTaxConfiguration
 );
-
 router.put(
-  '/societies/:id/tax-config',
+  '/:id/tax/config',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
   validate(updateTaxConfigSchema),
-  upsertTaxConfig
+  updateTaxConfiguration
 );
 
-// Society Compliance Information
+// Society compliance information
 router.put(
-  '/societies/:id/compliance',
+  '/:id/compliance',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
   validate(updateSocietyComplianceSchema),
   updateSocietyCompliance
 );
 
-// Receipt Sequence Configuration
-router.get(
-  '/societies/:id/receipt-sequence',
+// Invoice series configuration
+router.get('/:id/invoice-series/config', verifySocietyAccess, getInvoiceSeriesConfiguration);
+router.post(
+  '/:id/invoice-series/config',
+  authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
-  getReceiptSequenceConfig
+  updateInvoiceSeriesConfiguration
 );
 
+// Receipt series configuration
+router.get('/:id/receipt-series/config', verifySocietyAccess, getReceiptSeriesConfiguration);
 router.post(
-  '/societies/:id/receipt-sequence',
+  '/:id/receipt-series/config',
+  authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
+  verifySocietyAccess,
+  updateReceiptSeriesConfiguration
+);
+
+// Receipt sequence (India FY-aware)
+router.get('/:id/receipt-sequence', verifySocietyAccess, getReceiptSequenceConfig);
+router.post(
+  '/:id/receipt-sequence',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
   validate(configureReceiptSequenceSchema),
   configureReceiptSequenceHandler
 );
-
 router.post(
-  '/societies/:id/receipt-sequence/generate',
+  '/:id/receipt-sequence/generate',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN', 'COMMITTEE_USER'),
   verifySocietyAccess,
   generateReceiptNumberHandler
 );
 
-// Month Closure Management
-router.get(
-  '/societies/:id/month-closures',
-  verifySocietyAccess,
-  getMonthClosures
-);
-
+// Month closure management
+router.get('/:id/month-closures', verifySocietyAccess, getMonthClosures);
 router.post(
-  '/societies/:id/month-closures',
+  '/:id/month-closures',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
   validate(createMonthClosureSchema),
   upsertMonthClosure
 );
-
 router.put(
-  '/societies/:id/month-closures/:closureId',
+  '/:id/month-closures/:closureId',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
   validate(updateMonthClosureStatusSchema),
   updateMonthClosureStatus
 );
 
-// Audit Logs
+// Audit logs
 router.get(
-  '/societies/:id/audit-logs',
+  '/:id/audit-logs',
   authorize('MASTER_ADMIN', 'SOCIETY_ADMIN'),
   verifySocietyAccess,
   getAuditLogs
