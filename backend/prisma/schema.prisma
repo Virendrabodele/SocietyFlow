@@ -33,10 +33,12 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  societiesCreated Society[]        @relation("CreatedBySociety")
-  societyAccess    SocietyAccess[]
-  receiptsCreated  Receipt[]        @relation("CreatedByUser")
-  auditLogs        AuditLog[]
+  societiesCreated              Society[]                @relation("CreatedBySociety")
+  societyAccess                 SocietyAccess[]
+  receiptsCreated               Receipt[]                @relation("CreatedByUser")
+  auditLogs                     AuditLog[]
+  paymentUploadsCreated         PaymentUploadReference[] @relation("UploadedByUser")
+  paymentUploadsVerified        PaymentUploadReference[] @relation("VerifiedByUser")
 
   @@index([email])
   @@index([role])
@@ -73,6 +75,7 @@ model Society {
   notifications    Notification[]
   integrations     Integration[]
   auditLogs        AuditLog[]
+  bankAccount      BankAccount?
 
   @@index([code])
   @@index([createdByUserId])
@@ -239,10 +242,11 @@ model Invoice {
   updatedAt DateTime @updatedAt
 
   // Relations
-  lineItems     InvoiceLineItem[]
-  payments      Payment[]
-  receipts      Receipt[]
-  notifications Notification[]
+  lineItems         InvoiceLineItem[]
+  payments          Payment[]
+  receipts          Receipt[]
+  notifications     Notification[]
+  paymentUploads    PaymentUploadReference[]
 
   @@unique([societyId, memberId, periodMonth, periodYear])
   @@index([societyId])
@@ -424,4 +428,67 @@ model Integration {
   @@index([societyId])
   @@index([type])
   @@index([isActive])
+}
+
+// ============================================
+// BANK ACCOUNT MANAGEMENT
+// ============================================
+
+model BankAccount {
+  id        String   @id @default(uuid())
+  societyId String   @unique
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  accountName   String
+  accountNumber String
+  ifscCode      String
+  bankName      String
+  branchName    String?
+  upiId         String?
+  qrCodeUrl     String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+  @@index([isActive])
+}
+
+// ============================================
+// PAYMENT UPLOAD REFERENCE
+// ============================================
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PaymentUploadReference {
+  id        String             @id @default(uuid())
+  invoiceId String
+  invoice   Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  uploadedByUserId String
+  uploadedBy       User   @relation("UploadedByUser", fields: [uploadedByUserId], references: [id])
+
+  referenceNo        String?
+  transactionDate    DateTime
+  amount             Float
+  remarks            String?
+  fileUrl            String?
+
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedByUserId   String?
+  verifiedBy         User?              @relation("VerifiedByUser", fields: [verifiedByUserId], references: [id])
+  verifiedAt         DateTime?
+  verificationNotes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@index([uploadedByUserId])
+  @@index([verificationStatus])
 }
