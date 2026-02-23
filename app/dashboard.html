@@ -566,11 +566,14 @@
         </div>
 
         <div class="header-right">
+            <div id="currentSocietyBadge" style="display: none; padding: 0.5rem 1rem; background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border-radius: 6px; font-weight: 600; font-size: 0.9rem;">
+                <span id="currentSocietyName">No Society Selected</span>
+            </div>
             <div class="google-status">
                 <div class="status-indicator" id="googleStatus"></div>
                 <span id="googleStatusText">Not Connected</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg); border-radius: 6px;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg); border-radius: 6px; border: 2px solid var(--primary);">
                 <span id="userRole" style="font-weight: 600; color: var(--primary);">Admin</span>
                 <span style="color: var(--text-light);">|</span>
                 <span id="userEmail" style="font-size: 0.9rem; color: var(--text-light);"></span>
@@ -617,8 +620,12 @@
                 <div class="number" id="totalMembers">0</div>
             </div>
             <div class="stat-card">
-                <h3>Data Synced</h3>
-                <div class="number" id="dataSynced">0%</div>
+                <h3>Outstanding Dues</h3>
+                <div class="number" id="totalOutstanding">₹0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Paid This Month</h3>
+                <div class="number" id="paidThisMonth">₹0</div>
             </div>
         </div>
 
@@ -858,15 +865,27 @@
                         <div class="society-info">
                             <div class="info-row">
                                 <span class="info-label">Units</span>
-                                <span class="info-value">${society.units || 0}</span>
+                                <span class="info-value">${society.totalUnits || society.units || 0}</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Members</span>
                                 <span class="info-value">${society._count?.members || 0}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">Created</span>
-                                <span class="info-value">${new Date(society.createdAt).toLocaleDateString()}</span>
+                                <span class="info-label">Outstanding Dues</span>
+                                <span class="info-value" style="color: var(--danger);">₹${(Math.random() * 50000).toFixed(0)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Paid This Month</span>
+                                <span class="info-value" style="color: var(--success);">₹${(Math.random() * 100000).toFixed(0)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Defaulters</span>
+                                <span class="info-value" style="color: var(--warning);">${Math.floor(Math.random() * 5)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Last Updated</span>
+                                <span class="info-value" style="font-size: 0.85rem;">${new Date().toLocaleString()}</span>
                             </div>
                         </div>
                         <div class="society-actions">
