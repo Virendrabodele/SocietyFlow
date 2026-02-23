@@ -720,41 +720,52 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
+    <script src="api.js"></script>
     <script src="activity-tracker.js"></script>
     <script>
         const MASTER_EMAILS = ['masterdashboard@societyflow', 'masterdashboard@societyflow.com'];
         function isMasterUser(user) {
-            return !!(user && MASTER_EMAILS.includes((user.email || '').toLowerCase()));}
-
-        function getVisibleSocieties(user) {
-            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
-            return isMasterUser(user) ? allSocieties : allSocieties.filter(s => s.userId === user.id);
+            return !!(user && MASTER_EMAILS.includes((user.email || '').toLowerCase()));
         }
 
-        // Load user data on page load
-        window.addEventListener('load', function() {
-            const currentUser = localStorage.getItem('currentUser');
-            
-            if (!currentUser) {
-                // For GitHub Pages, need to account for /SocietyFlow/ in URL
+        // Load user data on page load - API-based
+        window.addEventListener('load', async function() {
+            // Check authentication
+            if (!api.isAuthenticated()) {
                 const basePath = window.location.pathname.includes('/SocietyFlow/') ? '/SocietyFlow/' : './';
                 window.location.href = basePath + 'app/login.html';
                 return;
             }
 
-            const user = JSON.parse(currentUser);
+            const user = api.getUserProfile();
+            if (!user) {
+                api.clearAuth();
+                const basePath = window.location.pathname.includes('/SocietyFlow/') ? '/SocietyFlow/' : './';
+                window.location.href = basePath + 'app/login.html';
+                return;
+            }
+
             const masterUser = isMasterUser(user);
             document.getElementById('userName').textContent = user.name;
-            document.getElementById('userRole').textContent = user.role === 'resident' ? 'Resident' : (masterUser ? 'Master Admin' : 'Admin');
+
+            // Map backend roles to display names
+            const roleDisplay = {
+                'MASTER_ADMIN': 'Master Admin',
+                'SOCIETY_ADMIN': 'Admin',
+                'COMMITTEE_USER': 'Committee Member',
+                'RESIDENT': 'Resident'
+            };
+            document.getElementById('userRole').textContent = roleDisplay[user.role] || 'User';
             document.getElementById('userEmail').textContent = user.email;
 
             // Apply role-based access
-            if (user.role === 'resident') {
+            if (user.role === 'RESIDENT') {
                 document.getElementById('addSocietyButton').style.display = 'none';
                 document.getElementById('sheetsSetup').style.display = 'none';
                 showResidentDashboard(user);
             } else {
-                loadUserSocieties(user);
+                await loadUserSocieties(user);
             }
         });
 
@@ -784,7 +795,7 @@
             document.getElementById('dataSynced').textContent = 'N/A';
         }
         function goToModule(page) {
-            const currentSociety = localStorage.getItem('currentSociety');
+            const currentSociety = api.getCurrentSociety();
             if (!currentSociety) {
                 alert('Please click Open on a society card first, then you can access all pages.');
                 return;
@@ -802,26 +813,31 @@
             alert('My Maintenance View - Coming Soon!\n\nYou can see your monthly charges and payment status here.');
         }
 
-        // Load user societies (admin/master admin)
-        function loadUserSocieties(user) {
-            const visibleSocieties = getVisibleSocieties(user);
-            const addBtn = document.getElementById('addSocietyButton');
+        // Load user societies (admin/master admin) - API-based
+        async function loadUserSocieties(user) {
+            try {
+                const societies = await api.getSocieties();
+                const addBtn = document.getElementById('addSocietyButton');
 
-            document.getElementById('totalSocieties').textContent = visibleSocieties.length;
+                document.getElementById('totalSocieties').textContent = societies.length;
 
-            if (!isMasterUser(user) && visibleSocieties.length >= 1) {
-                addBtn.style.display = 'none';
-            } else {
-                addBtn.style.display = 'inline-block';
+                if (!isMasterUser(user) && societies.length >= 1) {
+                    addBtn.style.display = 'none';
+                } else {
+                    addBtn.style.display = 'inline-block';
+                }
+
+                if (societies.length === 0) {
+                    displayEmptyState(user);
+                    return;
+                }
+
+                displaySocieties(societies);
+                updateStats(societies);
+            } catch (error) {
+                console.error('Error loading societies:', error);
+                alert('Failed to load societies. Please try refreshing the page.');
             }
-
-            if (visibleSocieties.length === 0) {
-                displayEmptyState(user);
-                return;
-            }
-
-            displaySocieties(visibleSocieties);
-            updateStats(visibleSocieties);
         }
 
         // Display societies
@@ -846,7 +862,7 @@
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Members</span>
-                                <span class="info-value">${(JSON.parse(localStorage.getItem('societyMembers_' + society.id)) || []).length}</span>
+                                <span class="info-value">${society._count?.members || 0}</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Created</span>
@@ -883,8 +899,7 @@
         function updateStats(societies) {
             let totalMembers = 0;
             societies.forEach(society => {
-                const members = JSON.parse(localStorage.getItem('societyMembers_' + society.id)) || [];
-                totalMembers += members.length;
+                totalMembers += society._count?.members || 0;
             });
             document.getElementById('totalMembers').textContent = totalMembers;
         }
@@ -951,8 +966,8 @@
             return /^[0-9]{10}$/.test(mobile);
         }
 
-        // Create new society
-        function createSociety() {
+        // Create new society - API-based
+        async function createSociety() {
             const name = document.getElementById('newSocietyName').value.trim();
             const units = document.getElementById('newSocietyUnits').value;
             const city = document.getElementById('newSocietyCity').value.trim();
@@ -992,120 +1007,53 @@
                 return;
             }
 
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
-            const masterUser = isMasterUser(currentUser);
+            const user = api.getUserProfile();
 
-            if (!masterUser) {
-                const ownSocieties = societies.filter(s => s.userId === currentUser.id);
-                if (ownSocieties.length >= 1) {
-                    alert('Only Master Admin can create multiple societies. Your account supports one society only.');
-                    closeModal('addSocietyModal');
-                    return;
-                }
-            }
+            try {
+                // Create society data for API
+                const societyData = {
+                    name: name,
+                    address: `${city}, ${state}`,
+                    totalUnits: parseInt(units),
+                    contactEmail: email,
+                    contactPhone: mobile
+                };
 
-            // Collect committee members
-            const members = [{
-                email: email,
-                mobile: mobile,
-                role: role,
-                invitationSent: true,
-                status: 'active',
-                joinedAt: new Date().toISOString()
-            }];
+                // Call API to create society
+                const newSociety = await api.createSociety(societyData);
 
-            // Add additional committee members
-            const committeeRows = document.querySelectorAll('.committee-member-row');
-            for (let row of committeeRows) {
-                const memberEmail = row.querySelector('.committee-email').value.trim();
-                const memberMobile = row.querySelector('.committee-mobile').value.trim();
-                const memberRole = row.querySelector('.committee-role').value;
+                alert('✓ Society created successfully!');
 
-                if (!memberEmail || !memberMobile) continue;
-
-                if (!validateEmail(memberEmail)) {
-                    alert('❌ Invalid email for committee member: ' + memberEmail);
-                    return;
+                if (window.recordSocietyFlowEvent) {
+                    window.recordSocietyFlowEvent('society_created', {
+                        societyId: newSociety.id,
+                        societyName: name
+                    });
                 }
 
-                if (!validateMobile(memberMobile)) {
-                    alert('❌ Invalid mobile for committee member: ' + memberMobile);
-                    return;
-                }
+                closeModal('addSocietyModal');
 
-                members.push({
-                    email: memberEmail,
-                    mobile: memberMobile,
-                    role: memberRole,
-                    invitationSent: true,
-                    status: 'active',
-                    joinedAt: new Date().toISOString()
-                });
+                // Reset form
+                document.getElementById('newSocietyName').value = '';
+                document.getElementById('newSocietyUnits').value = '';
+                document.getElementById('newSocietyCity').value = '';
+                document.getElementById('newSocietyState').value = '';
+                document.getElementById('newSocietyMobile').value = '';
+                document.getElementById('newSocietyEmail').value = '';
+                document.getElementById('newSocietyRole').value = 'admin';
+                committeeMembers = [];
+                renderCommitteeMembers();
+
+                await loadUserSocieties(user);
+            } catch (error) {
+                console.error('Error creating society:', error);
+                alert(`❌ Failed to create society: ${error.message || 'Please try again.'}`);
             }
-
-            const newSociety = {
-                id: Date.now().toString(),
-                userId: currentUser.id,
-                name: name,
-                units: parseInt(units),
-                city: city,
-                state: state,
-                createdAt: new Date().toISOString(),
-                googleSheetId: null,
-                dataLastSynced: null,
-                admins: [email],
-                members: members
-            };
-
-            societies.push(newSociety);
-            localStorage.setItem('allSocieties', JSON.stringify(societies));
-
-            // Initialize empty arrays for this society
-            localStorage.setItem('societyMembers_' + newSociety.id, JSON.stringify([]));
-            localStorage.setItem('societySettings_' + newSociety.id, JSON.stringify({}));
-
-            // Show success message with member details
-            const memberCount = members.length;
-            const invitationMsg = memberCount > 1
-                ? `\n\n✓ ${memberCount} members have been added to the society.\n✓ Invitations sent to all members.`
-                : '\n\n✓ Primary admin added successfully.';
-
-            alert('✓ Society created successfully!' + invitationMsg);
-
-            if (window.recordSocietyFlowEvent) {
-                window.recordSocietyFlowEvent('society_created', {
-                    societyId: newSociety.id,
-                    societyName: name,
-                    memberCount: memberCount
-                });
-            }
-
-            closeModal('addSocietyModal');
-
-            // Reset form
-            document.getElementById('newSocietyName').value = '';
-            document.getElementById('newSocietyUnits').value = '';
-            document.getElementById('newSocietyCity').value = '';
-            document.getElementById('newSocietyState').value = '';
-            document.getElementById('newSocietyMobile').value = '';
-            document.getElementById('newSocietyEmail').value = '';
-            document.getElementById('newSocietyRole').value = 'admin';
-            committeeMembers = [];
-            renderCommitteeMembers();
-
-            loadUserSocieties(currentUser);
         }
 
-        // Enter society (open dashboard for that society)
+        // Enter society (open dashboard for that society) - API-based
         function enterSociety(societyId) {
-            localStorage.setItem('currentSociety', societyId);
-            const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
-            const selected = societies.find(s => s.id === societyId);
-            const status = document.getElementById('moduleStatus');
-            if (selected && status) {
-                status.textContent = `Selected society: ${selected.name}`;
-            }
+            api.setCurrentSociety(societyId);
             if (window.recordSocietyFlowEvent) {
                 window.recordSocietyFlowEvent('society_open', { societyId: societyId });
             }
@@ -1118,15 +1066,19 @@
             alert('Edit functionality coming soon!');
         }
 
-        // Delete society
-        function deleteSociety(societyId) {
+        // Delete society - API-based
+        async function deleteSociety(societyId) {
             if (confirm('Are you sure you want to delete this society? This action cannot be undone.')) {
-                const societies = JSON.parse(localStorage.getItem('allSocieties')) || [];
-                const updatedSocieties = societies.filter(s => s.id !== societyId);
-                localStorage.setItem('allSocieties', JSON.stringify(updatedSocieties));
+                try {
+                    await api.deleteSociety(societyId);
+                    alert('✓ Society deleted successfully');
 
-                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-                loadUserSocieties(currentUser);
+                    const user = api.getUserProfile();
+                    await loadUserSocieties(user);
+                } catch (error) {
+                    console.error('Error deleting society:', error);
+                    alert(`❌ Failed to delete society: ${error.message || 'Please try again.'}`);
+                }
             }
         }
 
@@ -1141,28 +1093,15 @@
             closeModal('googleSheetsModal');
         }
 
-        // Logout
-        function handleLogout() {
+        // Logout - API-based
+        async function handleLogout() {
             if (confirm('Are you sure you want to logout?')) {
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('currentSociety');
-                const basePath = window.location.pathname.includes('/SocietyFlow/') ? '/SocietyFlow/' : './';
-                window.location.href = basePath + 'app/login.html';
+                await api.logout();
             }
         }
  // Auto-hide Google Sheets setup after connecting
         function hideGoogleSheetsSetup() {
             document.getElementById('sheetsSetup').style.display = 'none';
-        }
-
-        // Update selected society status
-        const selectedSocietyId = localStorage.getItem('currentSociety');
-        if (selectedSocietyId) {
-            const allSocieties = JSON.parse(localStorage.getItem('allSocieties')) || [];
-            const selectedSociety = allSocieties.find(s => s.id === selectedSocietyId);
-            if (selectedSociety) {
-                document.getElementById('moduleStatus').textContent = `Selected society: ${selectedSociety.name}`;
-            }
         }
     </script>
 </body>

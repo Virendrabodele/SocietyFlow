@@ -8,17 +8,15 @@ export interface TokenPayload {
 }
 
 export const generateAccessToken = (payload: TokenPayload): string => {
-  const options: SignOptions = {
-    expiresIn: config.jwt.accessExpiry,
-  };
-  return jwt.sign(payload, config.jwt.accessSecret, options);
+  return jwt.sign(payload, config.jwt.accessSecret, {
+    expiresIn: config.jwt.accessExpiry as any
+  });
 };
 
 export const generateRefreshToken = (payload: TokenPayload): string => {
-  const options: SignOptions = {
-    expiresIn: config.jwt.refreshExpiry,
-  };
-  return jwt.sign(payload, config.jwt.refreshSecret, options);
+  return jwt.sign(payload, config.jwt.refreshSecret, {
+    expiresIn: config.jwt.refreshExpiry as any
+  });
 };
 
 export const verifyAccessToken = (token: string): TokenPayload => {

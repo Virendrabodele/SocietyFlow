@@ -7,11 +7,11 @@ import GoogleSheetsService from '../services/google-sheets.service';
 import { config } from '../config';
 
 // Initialize Google Sheets Service
-const googleSheetsService = config.GOOGLE_SHEETS_ENABLED
+const googleSheetsService = config.googleSheets.enabled
   ? new GoogleSheetsService({
-      clientId: config.GOOGLE_CLIENT_ID || '',
-      clientSecret: config.GOOGLE_CLIENT_SECRET || '',
-      redirectUri: config.GOOGLE_REDIRECT_URI || '',
+      clientId: config.googleSheets.clientId || '',
+      clientSecret: config.googleSheets.clientSecret || '',
+      redirectUri: config.googleSheets.redirectUri || '',
     })
   : null;
 
@@ -46,7 +46,7 @@ export const createSocietyWithGoogleSync = async (req: AuthRequest, res: Respons
     let sheetId = googleSheetId;
 
     // Create Google Sheet if enabled
-    if (googleSheetsService && config.GOOGLE_SHEETS_ENABLED) {
+    if (googleSheetsService && config.googleSheets.enabled) {
       try {
         sheetId = await googleSheetsService.createSocietySheet(name);
         console.log(`✅ Google Sheet created for ${name}: ${googleSheetsService.getSheetUrl(sheetId)}`);
@@ -158,7 +158,7 @@ export const addMemberWithGoogleSync = async (req: AuthRequest, res: Response): 
     });
 
     // Sync to Google Sheets if enabled
-    if (googleSheetsService && config.GOOGLE_SHEETS_ENABLED && society) {
+    if (googleSheetsService && config.googleSheets.enabled && society) {
       try {
         // You would need to store the googleSheetId in the Society model
         // For now, we'll use a placeholder or get it from another source
@@ -207,7 +207,7 @@ export const logActivityToSheet = async (
   entityType: string,
   details?: string
 ) => {
-  if (!googleSheetsService || !config.GOOGLE_SHEETS_ENABLED) {
+  if (!googleSheetsService || !config.googleSheets.enabled) {
     return;
   }
 
