@@ -485,6 +485,8 @@ corpus_weight:0.5"></textarea>
 
                 <div class="bulk-import">
                     <h3>Bulk Add Members (CSV / Excel)</h3>
+                    <button type="button" class="btn btn-secondary" onclick="downloadSampleCSV()" style="margin-bottom: 1rem;">📥 Download Sample CSV</button>
+
                     <div class="form-group">
                         <label>Upload CSV File</label>
                         <input type="file" id="bulkCsvFile" accept=".csv,.tsv,.txt,.xlsx,.xls">
@@ -506,6 +508,77 @@ corpus_weight:0.5"></textarea>
                 <div class="table-header">
                     <h2>Members List</h2>
                     <input type="text" class="search-box" id="searchBox" placeholder="Search members...">
+                </div>
+
+                <!-- Filters and Column Toggle -->
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg); border-radius: 8px;">
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.25rem;">Tower/Block Filter</label>
+                        <select id="towerFilter" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;">
+                            <option value="">All Towers</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.25rem;">Status Filter</label>
+                        <select id="statusFilter" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="vacant">Vacant</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.25rem;">Dues Filter</label>
+                        <select id="duesFilter" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;">
+                            <option value="">All Members</option>
+                            <option value="pending">With Pending Dues</option>
+                            <option value="clear">Dues Clear</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <button type="button" onclick="toggleColumnPanel()" style="width: 100%; padding: 0.5rem 1rem; margin-top: 1.4rem; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                            ⚙️ Columns
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Column Toggle Panel -->
+                <div id="columnPanel" style="display: none; padding: 1rem; background: var(--bg); border-radius: 8px; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--primary);">Toggle Table Columns</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('name')" data-column="name">
+                            <span>Name</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('unit')" data-column="unit">
+                            <span>Unit</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('phone')" data-column="phone">
+                            <span>Phone</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('email')" data-column="email">
+                            <span>Email</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('details')" data-column="details">
+                            <span>Billing Details</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('status')" data-column="status">
+                            <span>Status</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('joined')" data-column="joined">
+                            <span>Joined Date</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" checked onchange="toggleColumn('actions')" data-column="actions">
+                            <span>Actions</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div id="membersList">
@@ -745,12 +818,14 @@ corpus_weight:0.5"></textarea>
                 <table>
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Unit</th>
-                            <th>Details</th>
-                            <th>Status</th>
-                            <th>Joined</th>
-                            <th>Actions</th>
+                            ${visibleColumns.name ? '<th>Name</th>' : ''}
+                            ${visibleColumns.unit ? '<th>Unit</th>' : ''}
+                            ${visibleColumns.phone ? '<th>Phone</th>' : ''}
+                            ${visibleColumns.email ? '<th>Email</th>' : ''}
+                            ${visibleColumns.details ? '<th>Billing Details</th>' : ''}
+                            ${visibleColumns.status ? '<th>Status</th>' : ''}
+                            ${visibleColumns.joined ? '<th>Joined</th>' : ''}
+                            ${visibleColumns.actions ? '<th>Actions</th>' : ''}
                         </tr>
                     </thead>
                     <tbody>
@@ -775,19 +850,21 @@ corpus_weight:0.5"></textarea>
 
                 tableHTML += `
                     <tr>
-                        <td><strong>${member.name}</strong></td>
-                        <td>${member.unit}</td>
-                        <td>${details}</td>
-                        <td><span style="background:${statusBg};color:${statusColor};padding:0.25rem 0.75rem;border-radius:20px;font-size:0.85rem;">${member.status}</span></td>
-                        <td>${member.joinDate}</td>
-                        <td>
+                        ${visibleColumns.name ? `<td><strong>${member.name}</strong></td>` : ''}
+                        ${visibleColumns.unit ? `<td>${member.unit}</td>` : ''}
+                        ${visibleColumns.phone ? `<td>${member.phone || '-'}</td>` : ''}
+                        ${visibleColumns.email ? `<td>${member.email || '-'}</td>` : ''}
+                        ${visibleColumns.details ? `<td>${details}</td>` : ''}
+                        ${visibleColumns.status ? `<td><span style="background:${statusBg};color:${statusColor};padding:0.25rem 0.75rem;border-radius:20px;font-size:0.85rem;">${member.status}</span></td>` : ''}
+                        ${visibleColumns.joined ? `<td>${member.joinDate}</td>` : ''}
+                        ${visibleColumns.actions ? `<td>
                             <div class="action-buttons">
                                 ${emailButton}
                                 ${smsButton}
                                 <button class="btn-small btn-edit" onclick="editMember(${member.id})">Edit</button>
                                 <button class="btn-small btn-delete" onclick="deleteMember(${member.id})">Delete</button>
                             </div>
-                        </td>
+                        </td>` : ''}
                     </tr>
                 `;
             });
@@ -806,13 +883,7 @@ corpus_weight:0.5"></textarea>
         }
 
         // Search functionality
-        document.getElementById('searchBox').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const filtered = members.filter(m =>
-                m.name.toLowerCase().includes(searchTerm) || m.unit.toLowerCase().includes(searchTerm)
-            );
-            displayMembers(filtered);
-        });
+        document.getElementById('searchBox').addEventListener('input', applyFilters);
 
         // Update statistics
         function updateStats() {
@@ -884,9 +955,123 @@ corpus_weight:0.5"></textarea>
             window.location.href = smsLink;
         }
 
+        // Download sample CSV
+        function downloadSampleCSV() {
+            const csvContent = `name,phone,email,unit,type,bhk,sqft,waterReading,dgReading,meterReading,status
+John Doe,9876543210,john@example.com,A-101,bhk,2,1200,125,35,220,active
+Jane Smith,9876543211,jane@example.com,A-102,sqft,3,1500,130,40,250,active
+Robert Johnson,9876543212,robert@example.com,B-201,mixed,2,1100,120,30,200,active`;
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'sample_members.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        // Column visibility state
+        const visibleColumns = {
+            name: true,
+            unit: true,
+            phone: true,
+            email: true,
+            details: true,
+            status: true,
+            joined: true,
+            actions: true
+        };
+
+        // Toggle column panel
+        function toggleColumnPanel() {
+            const panel = document.getElementById('columnPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Toggle column visibility
+        function toggleColumn(columnName) {
+            visibleColumns[columnName] = !visibleColumns[columnName];
+            applyFilters(); // Re-render table with new column visibility
+        }
+
+        // Get unique towers from members
+        function populateTowerFilter() {
+            const towerSet = new Set();
+            members.forEach(m => {
+                const unit = m.unit || '';
+                const match = unit.match(/^([A-Za-z]+)/);
+                if (match) {
+                    towerSet.add(match[1].toUpperCase());
+                }
+            });
+            const towerFilter = document.getElementById('towerFilter');
+            towerFilter.innerHTML = '<option value="">All Towers</option>';
+            Array.from(towerSet).sort().forEach(tower => {
+                const option = document.createElement('option');
+                option.value = tower;
+                option.textContent = `Tower ${tower}`;
+                towerFilter.appendChild(option);
+            });
+        }
+
+        // Apply all filters
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const towerFilter = document.getElementById('towerFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const duesFilter = document.getElementById('duesFilter').value;
+
+            // Get invoices for dues filter
+            const invoices = JSON.parse(localStorage.getItem('societyInvoices_' + currentSociety)) || [];
+
+            const filtered = members.filter(m => {
+                // Search filter
+                const matchesSearch = !searchTerm ||
+                    m.name.toLowerCase().includes(searchTerm) ||
+                    m.unit.toLowerCase().includes(searchTerm) ||
+                    (m.phone || '').includes(searchTerm) ||
+                    (m.email || '').toLowerCase().includes(searchTerm);
+
+                // Tower filter
+                const memberTower = (m.unit || '').match(/^([A-Za-z]+)/);
+                const matchesTower = !towerFilter ||
+                    (memberTower && memberTower[1].toUpperCase() === towerFilter);
+
+                // Status filter
+                const matchesStatus = !statusFilter || m.status === statusFilter;
+
+                // Dues filter
+                let matchesDues = true;
+                if (duesFilter === 'pending') {
+                    matchesDues = invoices.some(inv =>
+                        inv.unit === m.unit && inv.paymentStatus !== 'paid'
+                    );
+                } else if (duesFilter === 'clear') {
+                    matchesDues = !invoices.some(inv =>
+                        inv.unit === m.unit && inv.paymentStatus !== 'paid'
+                    );
+                }
+
+                return matchesSearch && matchesTower && matchesStatus && matchesDues;
+            });
+
+            displayMembers(filtered);
+        }
+
+        // Setup filter listeners
+        document.getElementById('towerFilter').addEventListener('change', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('duesFilter').addEventListener('change', applyFilters);
+
         // Initial display
         displayMembers();
         updateStats();
+        populateTowerFilter();
     </script>
 </body>
 </html>
