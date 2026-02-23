@@ -1,4 +1,5 @@
 import { getPrismaClient } from '../config/database';
+import { Prisma } from '../generated/prisma';
 
 interface AuditLogData {
   userId: string;
@@ -22,6 +23,7 @@ export const createAuditLog = async (data: AuditLogData): Promise<void> => {
         action: data.action,
         entityType: data.entityType || null,
         entityId: data.entityId || null,
+        payload: (data.payload || {}) as Prisma.InputJsonValue,
         payload: (data.payload || {}) as object,
         beforeSnapshot: data.beforeSnapshot ? (data.beforeSnapshot as object) : undefined,
         afterSnapshot: data.afterSnapshot ? (data.afterSnapshot as object) : undefined,

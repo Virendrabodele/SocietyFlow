@@ -13,6 +13,9 @@ import societyRoutes from './routes/society.routes';
 import memberRoutes from './routes/member.routes';
 import billingRoutes from './routes/billing.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import paymentRoutes from './routes/payment.routes';
+import reminderRoutes from './routes/reminder.routes';
+import residentRoutes from './routes/resident.routes';
 import complianceRoutes from './routes/compliance.routes';
 import reportsRoutes from './routes/reports.routes';
 import bankAccountRoutes from './routes/bank-account.routes';
@@ -54,6 +57,9 @@ app.use(`${apiPrefix}/societies`, societyRoutes);
 app.use(`${apiPrefix}/societies`, memberRoutes);
 app.use(`${apiPrefix}/societies`, billingRoutes);
 app.use(`${apiPrefix}/societies`, invoiceRoutes);
+app.use(`${apiPrefix}/societies`, paymentRoutes);
+app.use(`${apiPrefix}/societies`, reminderRoutes);
+app.use(`${apiPrefix}/resident`, residentRoutes);
 app.use(`${apiPrefix}/societies`, complianceRoutes);
 app.use(`${apiPrefix}/societies`, reportsRoutes);
 app.use(`${apiPrefix}/societies`, bankAccountRoutes);
@@ -88,6 +94,16 @@ const startServer = async () => {
     const prisma = getPrismaClient();
     await prisma.$connect();
     console.log('✓ Database connected successfully');
+
+    // Start reminder worker (optional, only if Redis is configured)
+    if (config.redis.host) {
+      try {
+        const { scheduleReminderProcessing } = await import('./workers/reminder.worker');
+        await scheduleReminderProcessing();
+      } catch (error) {
+        console.warn('⚠ Reminder worker not started:', error);
+      }
+    }
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);
