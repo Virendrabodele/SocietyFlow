@@ -3,6 +3,27 @@ import { getPrismaClient } from '../config/database';
 import { sendSuccessResponse, sendErrorResponse, AppError } from '../utils/response';
 import { createAuditLog } from '../utils/audit';
 import { AuthRequest } from '../middleware/auth';
+import {
+  getTaxConfig,
+  updateTaxConfig,
+} from '../services/tax.service';
+import {
+  getInvoiceSeriesConfig,
+  updateInvoiceSeriesConfig,
+} from '../services/invoice-series.service';
+import {
+  getReceiptSeriesConfig,
+  updateReceiptSeriesConfig,
+} from '../services/receipt-series.service';
+
+// ============================================
+// TAX CONFIGURATION
+// ============================================
+
+export const getTaxConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const societyId = req.params.id as string;
+    const taxConfig = await getTaxConfig(societyId);
 import { validateGSTIN, validatePAN } from '../utils/validation';
 import {
   generateReceiptNumber,
@@ -32,6 +53,9 @@ export const getTaxConfig = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+export const updateTaxConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const societyId = req.params.id as string;
 /**
  * Create or Update Tax Configuration
  */
@@ -44,6 +68,20 @@ export const upsertTaxConfig = async (req: AuthRequest, res: Response): Promise<
       throw new AppError('Authentication required', 401);
     }
 
+    const { gstEnabled, gstin, taxRegime, defaultTaxRate, taxThreshold, roundingPolicy } = req.body;
+
+    const prisma = getPrismaClient();
+
+    // Get old config for audit
+    const oldConfig = await getTaxConfig(societyId);
+
+    const taxConfig = await updateTaxConfig(societyId, {
+      gstEnabled,
+      gstin,
+      taxRegime,
+      defaultTaxRate,
+      taxThreshold,
+      roundingPolicy,
     const {
       gstEnabled,
       defaultGstRate,
@@ -93,6 +131,10 @@ export const upsertTaxConfig = async (req: AuthRequest, res: Response): Promise<
       action: 'tax_config_update',
       entityType: 'tax_config',
       entityId: taxConfig.id,
+      payload: { gstEnabled, gstin, taxRegime, defaultTaxRate },
+    });
+
+    sendSuccessResponse(res, taxConfig, 'Tax configuration updated successfully');
       payload: { gstEnabled, defaultGstRate, placeOfSupply },
     });
 
@@ -102,6 +144,16 @@ export const upsertTaxConfig = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
+// ============================================
+// INVOICE SERIES CONFIGURATION
+// ============================================
+
+export const getInvoiceSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const societyId = req.params.id as string;
+    const config = await getInvoiceSeriesConfig(societyId);
+
+    sendSuccessResponse(res, config, 'Invoice series configuration retrieved successfully');
 /**
  * Update Society Compliance Information
  */
@@ -155,6 +207,7 @@ export const updateSocietyCompliance = async (req: AuthRequest, res: Response): 
   }
 };
 
+export const updateInvoiceSeriesConfiguration = async (
 /**
  * Configure Receipt Sequence
  */
@@ -163,6 +216,7 @@ export const configureReceiptSequenceHandler = async (
   res: Response
 ): Promise<void> => {
   try {
+    const societyId = req.params.id as string;
     const societyId = req.params.id;
     const userId = req.user?.userId;
 
@@ -170,6 +224,14 @@ export const configureReceiptSequenceHandler = async (
       throw new AppError('Authentication required', 401);
     }
 
+    const { prefix, includeYear, includeSocCode, separator, resetOnNewYear } = req.body;
+
+    const config = await updateInvoiceSeriesConfig(societyId, {
+      prefix,
+      includeYear,
+      includeSocCode,
+      separator,
+      resetOnNewYear,
     const { format, customFormat, prefix, resetOnNewFY } = req.body;
 
     await configureReceiptSequence(societyId, {
@@ -183,6 +245,13 @@ export const configureReceiptSequenceHandler = async (
     await createAuditLog({
       userId,
       societyId,
+      action: 'invoice_series_config_update',
+      entityType: 'invoice_series_config',
+      entityId: config.id,
+      payload: { prefix, includeYear, includeSocCode },
+    });
+
+    sendSuccessResponse(res, config, 'Invoice series configuration updated successfully');
       action: 'receipt_sequence_config',
       entityType: 'receipt_sequence',
       payload: { format, prefix },
@@ -194,6 +263,16 @@ export const configureReceiptSequenceHandler = async (
   }
 };
 
+// ============================================
+// RECEIPT SERIES CONFIGURATION
+// ============================================
+
+export const getReceiptSeriesConfiguration = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const societyId = req.params.id as string;
+    const config = await getReceiptSeriesConfig(societyId);
+
+    sendSuccessResponse(res, config, 'Receipt series configuration retrieved successfully');
 /**
  * Get Receipt Sequence Configuration
  */
@@ -223,6 +302,7 @@ export const getReceiptSequenceConfig = async (req: AuthRequest, res: Response):
   }
 };
 
+export const updateReceiptSeriesConfiguration = async (
 /**
  * Generate Next Receipt Number (for preview)
  */
@@ -231,6 +311,7 @@ export const generateReceiptNumberHandler = async (
   res: Response
 ): Promise<void> => {
   try {
+    const societyId = req.params.id as string;
     const societyId = req.params.id;
 
     const result = await generateReceiptNumber({ societyId });
@@ -252,6 +333,16 @@ export const upsertMonthClosure = async (req: AuthRequest, res: Response): Promi
     if (!userId) {
       throw new AppError('Authentication required', 401);
     }
+
+    const { prefix, includeYear, includeSocCode, separator, resetOnNewYear } = req.body;
+
+    const config = await updateReceiptSeriesConfig(societyId, {
+      prefix,
+      includeYear,
+      includeSocCode,
+      separator,
+      resetOnNewYear,
+    });
 
     const { periodMonth, periodYear, status } = req.body;
 
@@ -292,6 +383,13 @@ export const upsertMonthClosure = async (req: AuthRequest, res: Response): Promi
     await createAuditLog({
       userId,
       societyId,
+      action: 'receipt_series_config_update',
+      entityType: 'receipt_series_config',
+      entityId: config.id,
+      payload: { prefix, includeYear, includeSocCode },
+    });
+
+    sendSuccessResponse(res, config, 'Receipt series configuration updated successfully');
       action: 'month_closure_create',
       entityType: 'month_closure',
       entityId: monthClosure.id,

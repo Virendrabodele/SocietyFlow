@@ -6,6 +6,7 @@ import {
   createPayment,
   createReceipt,
   getReceipts,
+  cancelReceipt,
 } from '../controllers/invoice.controller';
 import { sendInvoiceNotifications } from '../controllers/notification.controller';
 import { authenticate } from '../middleware/auth';
@@ -35,6 +36,7 @@ router.post('/:id/invoices/:invoiceId/payments', validate(createPaymentSchema), 
 // Receipt routes
 router.post('/:id/invoices/:invoiceId/receipt', validate(createReceiptSchema), createReceipt);
 router.get('/:id/receipts', getReceipts);
+router.post('/:id/receipts/:receiptId/cancel', cancelReceipt);
 
 // Notification routes
 router.post(

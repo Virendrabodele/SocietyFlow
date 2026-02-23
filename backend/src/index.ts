@@ -13,6 +13,8 @@ import societyRoutes from './routes/society.routes';
 import memberRoutes from './routes/member.routes';
 import billingRoutes from './routes/billing.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import complianceRoutes from './routes/compliance.routes';
+import reportsRoutes from './routes/reports.routes';
 import bankAccountRoutes from './routes/bank-account.routes';
 import complianceRoutes from './routes/compliance.routes';
 
@@ -53,6 +55,8 @@ app.use(`${apiPrefix}/societies`, societyRoutes);
 app.use(`${apiPrefix}/societies`, memberRoutes);
 app.use(`${apiPrefix}/societies`, billingRoutes);
 app.use(`${apiPrefix}/societies`, invoiceRoutes);
+app.use(`${apiPrefix}/societies`, complianceRoutes);
+app.use(`${apiPrefix}/societies`, reportsRoutes);
 app.use(`${apiPrefix}/societies`, bankAccountRoutes);
 app.use(`${apiPrefix}`, complianceRoutes);
 
