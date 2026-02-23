@@ -215,12 +215,12 @@ export const getResidentInvoicesSchema = z.object({
   query: z.object({
     societyId: z.string().uuid('Invalid society ID').optional(),
     status: z.enum(['DRAFT', 'GENERATED', 'SENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED']).optional(),
-    fromMonth: z.string().optional().transform((val) => (val ? parseInt(val, 10) : undefined)),
-    fromYear: z.string().optional().transform((val) => (val ? parseInt(val, 10) : undefined)),
-    toMonth: z.string().optional().transform((val) => (val ? parseInt(val, 10) : undefined)),
-    toYear: z.string().optional().transform((val) => (val ? parseInt(val, 10) : undefined)),
-    page: z.string().optional().transform((val) => (val ? parseInt(val, 10) : 1)),
-    limit: z.string().optional().transform((val) => (val ? parseInt(val, 10) : 50)),
+    fromMonth: z.string().transform((val) => (val ? parseInt(val, 10) : undefined)).optional(),
+    fromYear: z.string().transform((val) => (val ? parseInt(val, 10) : undefined)).optional(),
+    toMonth: z.string().transform((val) => (val ? parseInt(val, 10) : undefined)).optional(),
+    toYear: z.string().transform((val) => (val ? parseInt(val, 10) : undefined)).optional(),
+    page: z.string().transform((val) => (val ? parseInt(val, 10) : 1)).optional(),
+    limit: z.string().transform((val) => (val ? parseInt(val, 10) : 50)).optional(),
   }).optional(),
 });
 
@@ -229,8 +229,8 @@ export const getResidentReceiptsSchema = z.object({
     societyId: z.string().uuid('Invalid society ID').optional(),
     fromDate: z.string().datetime().optional(),
     toDate: z.string().datetime().optional(),
-    page: z.string().optional().transform((val) => (val ? parseInt(val, 10) : 1)),
-    limit: z.string().optional().transform((val) => (val ? parseInt(val, 10) : 50)),
+    page: z.string().transform((val) => (val ? parseInt(val, 10) : 1)).optional(),
+    limit: z.string().transform((val) => (val ? parseInt(val, 10) : 50)).optional(),
   }).optional(),
 });
 
