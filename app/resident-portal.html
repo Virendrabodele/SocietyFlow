@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resident Portal - SocietyFlow</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #1e40af;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        nav {
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo::before {
+            content: "🏘️ ";
+        }
+
+        .welcome {
+            font-size: 1rem;
+            color: var(--text-light);
+        }
+
+        .welcome strong {
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-light);
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .summary-card h3 {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card .amount {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:hover {
+            background: var(--bg);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-paid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-pending {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-partial {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.625rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid var(--surface);
+        }
+
+        .timeline-content {
+            background: var(--bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .timeline-date {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-details {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        @media (max-width: 768px) {
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="dashboard.html" class="logo">SocietyFlow</a>
+            <div class="welcome">
+                Welcome, <strong id="residentName">Resident</strong>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>👤 My Resident Portal</h1>
+            <p>View your unit details, invoices, and payments</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <h3>My Unit</h3>
+                <div class="amount" id="unitNumber">-</div>
+            </div>
+            <div class="summary-card">
+                <h3>Outstanding Amount</h3>
+                <div class="amount" id="outstandingAmount">₹0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Paid This Month</h3>
+                <div class="amount" id="paidThisMonth">₹0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Total Paid (YTD)</h3>
+                <div class="amount" id="totalPaid">₹0</div>
+            </div>
+        </div>
+
+        <!-- My Invoices -->
+        <div class="card">
+            <h2>📄 My Invoices</h2>
+            <div id="invoicesList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📄</div>
+                    <p>No invoices found</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Receipts -->
+        <div class="card">
+            <h2>🧾 My Receipts</h2>
+            <div id="receiptsList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🧾</div>
+                    <p>No receipts found</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment History Timeline -->
+        <div class="card">
+            <h2>💰 Payment History</h2>
+            <div id="paymentTimeline">
+                <div class="empty-state">
+                    <div class="empty-state-icon">💰</div>
+                    <p>No payment history available</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bank Account Details -->
+        <div class="card" id="bankDetailsCard" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid var(--warning);">
+            <h2 style="color: #92400e;">🏦 Bank Account Details for Payment</h2>
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 1rem;">
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 1rem; font-size: 0.95rem;">
+                    <strong>Account Name:</strong>
+                    <span id="bankAccountName">-</span>
+
+                    <strong>Account Number:</strong>
+                    <span id="bankAccountNumber">-</span>
+
+                    <strong>IFSC Code:</strong>
+                    <span id="bankIFSC">-</span>
+
+                    <strong>Bank Name:</strong>
+                    <span id="bankName">-</span>
+                </div>
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #fef3c7; border-radius: 6px;">
+                    <p style="color: #92400e; font-size: 0.9rem; font-weight: 600;">
+                        💡 Please use your Unit Number as payment reference when making transfers
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script>
+        let currentMember = null;
+        let mockInvoices = [];
+        let mockReceipts = [];
+
+        // Initialize on load
+        window.addEventListener('load', async function() {
+            // Check authentication
+            if (!api.isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const user = api.getUserProfile();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Only residents should access this page
+            if (user.role !== 'RESIDENT') {
+                alert('This page is only accessible to residents');
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            document.getElementById('residentName').textContent = user.name;
+
+            // Load resident data
+            await loadResidentData(user);
+        });
+
+        async function loadResidentData(user) {
+            try {
+                // Mock data for demonstration
+                // In production, this would fetch from API
+                currentMember = {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    unit: 'A-101',
+                    bhk: 2,
+                    sqft: 1000
+                };
+
+                // Generate mock invoices
+                mockInvoices = generateMockInvoices();
+                mockReceipts = generateMockReceipts();
+
+                // Update UI
+                displaySummary();
+                displayInvoices();
+                displayReceipts();
+                displayPaymentTimeline();
+                displayBankDetails();
+            } catch (error) {
+                console.error('Error loading resident data:', error);
+                alert('Failed to load your data. Please try again.');
+            }
+        }
+
+        function generateMockInvoices() {
+            const invoices = [];
+            const months = ['January', 'February', 'March', 'April', 'May'];
+
+            months.forEach((month, index) => {
+                invoices.push({
+                    id: `INV-2024-${String(index + 1).padStart(3, '0')}`,
+                    month: month,
+                    year: 2024,
+                    amount: 5000 + (Math.random() * 1000),
+                    paid: Math.random() > 0.5 ? 5000 + (Math.random() * 1000) : 0,
+                    dueDate: `2024-${String(index + 1).padStart(2, '0')}-10`,
+                    status: Math.random() > 0.5 ? 'paid' : 'pending'
+                });
+            });
+
+            return invoices;
+        }
+
+        function generateMockReceipts() {
+            return mockInvoices.filter(inv => inv.status === 'paid').map(inv => ({
+                id: `REC-2024-${inv.id.split('-')[2]}`,
+                invoiceId: inv.id,
+                amount: inv.paid,
+                date: inv.dueDate,
+                mode: 'UPI',
+                reference: 'TXN' + Math.random().toString(36).substring(7).toUpperCase()
+            }));
+        }
+
+        function displaySummary() {
+            document.getElementById('unitNumber').textContent = currentMember.unit;
+
+            const outstanding = mockInvoices
+                .filter(inv => inv.status === 'pending')
+                .reduce((sum, inv) => sum + (inv.amount - inv.paid), 0);
+
+            const paidThisMonth = mockInvoices
+                .filter(inv => inv.month === 'May')
+                .reduce((sum, inv) => sum + inv.paid, 0);
+
+            const totalPaid = mockInvoices
+                .reduce((sum, inv) => sum + inv.paid, 0);
+
+            document.getElementById('outstandingAmount').textContent = '₹' + outstanding.toFixed(0);
+            document.getElementById('paidThisMonth').textContent = '₹' + paidThisMonth.toFixed(0);
+            document.getElementById('totalPaid').textContent = '₹' + totalPaid.toFixed(0);
+        }
+
+        function displayInvoices() {
+            const container = document.getElementById('invoicesList');
+
+            if (mockInvoices.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📄</div>
+                        <p>No invoices found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Invoice No</th>
+                            <th>Period</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            mockInvoices.forEach(invoice => {
+                const statusClass = invoice.status === 'paid' ? 'status-paid' : 'status-pending';
+                const statusText = invoice.status === 'paid' ? 'Paid' : 'Pending';
+
+                html += `
+                    <tr>
+                        <td><strong>${invoice.id}</strong></td>
+                        <td>${invoice.month} ${invoice.year}</td>
+                        <td>₹${invoice.amount.toFixed(2)}</td>
+                        <td>${new Date(invoice.dueDate).toLocaleDateString()}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="downloadInvoice('${invoice.id}')">📥 Download</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function displayReceipts() {
+            const container = document.getElementById('receiptsList');
+
+            if (mockReceipts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🧾</div>
+                        <p>No receipts found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Receipt No</th>
+                            <th>Invoice</th>
+                            <th>Amount</th>
+                            <th>Payment Date</th>
+                            <th>Mode</th>
+                            <th>Reference</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            mockReceipts.forEach(receipt => {
+                html += `
+                    <tr>
+                        <td><strong>${receipt.id}</strong></td>
+                        <td>${receipt.invoiceId}</td>
+                        <td>₹${receipt.amount.toFixed(2)}</td>
+                        <td>${new Date(receipt.date).toLocaleDateString()}</td>
+                        <td>${receipt.mode}</td>
+                        <td>${receipt.reference}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="downloadReceipt('${receipt.id}')">📥 Download</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function displayPaymentTimeline() {
+            const container = document.getElementById('paymentTimeline');
+            const payments = mockReceipts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (payments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💰</div>
+                        <p>No payment history available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="timeline">';
+
+            payments.forEach(payment => {
+                html += `
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-date">${new Date(payment.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                            <div class="timeline-title">Payment of ₹${payment.amount.toFixed(2)}</div>
+                            <div class="timeline-details">
+                                Invoice: ${payment.invoiceId} | Mode: ${payment.mode} | Reference: ${payment.reference}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function displayBankDetails() {
+            // Mock bank details - would come from society settings
+            document.getElementById('bankAccountName').textContent = 'Green Park Apartments Society';
+            document.getElementById('bankAccountNumber').textContent = '1234567890123456';
+            document.getElementById('bankIFSC').textContent = 'SBIN0001234';
+            document.getElementById('bankName').textContent = 'State Bank of India';
+        }
+
+        function downloadInvoice(invoiceId) {
+            alert(`Invoice ${invoiceId} download functionality will be implemented with PDF generation`);
+        }
+
+        function downloadReceipt(receiptId) {
+            alert(`Receipt ${receiptId} download functionality will be implemented with PDF generation`);
+        }
+    </script>
+</body>
+</html>

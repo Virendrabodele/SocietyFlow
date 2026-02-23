@@ -485,19 +485,29 @@ corpus_weight:0.5"></textarea>
 
                 <div class="bulk-import">
                     <h3>Bulk Add Members (CSV / Excel)</h3>
+
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" onclick="downloadSampleCSV()" style="width: 100%; margin-bottom: 1rem;">📥 Download Sample CSV Template</button>
+                    </div>
+
                     <div class="form-group">
                         <label>Upload CSV File</label>
                         <input type="file" id="bulkCsvFile" accept=".csv,.tsv,.txt,.xlsx,.xls">
-                        <p class="helper-text">Tip: Excel file should be saved as CSV before upload. Required columns: name, unit, type.</p>
+                        <p class="helper-text">Tip: Excel file should be saved as CSV before upload. Required columns: name, unit.</p>
                     </div>
                     <button type="button" class="btn btn-secondary" onclick="importMembersFromFile()">Import from File</button>
 
                     <div class="form-group" style="margin-top: 1rem;">
                         <label>Or Paste Excel Rows</label>
                         <textarea id="bulkPasteData" class="bulk-textarea" placeholder="Paste rows from Excel (tab-separated). First row can be header."></textarea>
-                        <p class="helper-text">Supported headers: name, phone, email, unit, type, bhk, sqft, status.</p>
+                        <p class="helper-text">Supported headers: name, phone, email, unit, bhk, sqft, waterReading, dgReading, meterReading, status.</p>
                     </div>
                     <button type="button" class="btn btn-secondary" onclick="importMembersFromPaste()">Import from Pasted Data</button>
+
+                    <div id="importPreview" style="margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: 6px; display: none;">
+                        <h4 style="color: var(--primary); margin-bottom: 0.5rem;">Import Preview</h4>
+                        <div id="importPreviewContent"></div>
+                    </div>
                 </div>
             </div>
 
@@ -646,8 +656,7 @@ corpus_weight:0.5"></textarea>
                 const text = e.target.result || '';
                 const delimiter = text.includes('\t') ? '\t' : ',';
                 const lines = text.split(/\r?\n/).filter(Boolean);
-                const result = rowsToMembers(lines, delimiter);
-                alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+                previewAndImport(lines, delimiter);
                 fileInput.value = '';
             };
             reader.readAsText(file);
@@ -658,9 +667,117 @@ corpus_weight:0.5"></textarea>
             if (!raw) { alert('Please paste data from Excel first.'); return; }
             const lines = raw.split(/\r?\n/).filter(Boolean);
             const delimiter = lines[0].includes('\t') ? '\t' : ',';
-            const result = rowsToMembers(lines, delimiter);
-            alert(`Import complete. Added: ${result.added}, Skipped: ${result.skipped}`);
+            previewAndImport(lines, delimiter);
             document.getElementById('bulkPasteData').value = '';
+        }
+
+        function previewAndImport(lines, delimiter) {
+            if (!lines.length) return { added: 0, skipped: 0 };
+            const firstRow = parseDelimitedLine(lines[0], delimiter).map(v => v.toLowerCase());
+            const hasHeader = firstRow.includes('name') || firstRow.includes('member name');
+            const startIndex = hasHeader ? 1 : 0;
+            const headers = hasHeader ? firstRow : ['name', 'phone', 'email', 'unit', 'bhk', 'sqft', 'waterreading', 'dgreading', 'meterreading', 'status'];
+
+            let validRows = [];
+            let skippedRows = [];
+
+            for (let i = startIndex; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cols = parseDelimitedLine(line, delimiter);
+                const row = {};
+                headers.forEach((h, idx) => { row[h] = (cols[idx] || '').trim(); });
+                const memberName = row.name || row['member name'] || '';
+                const unit = row.unit || row['unit/flat number'] || '';
+
+                if (!memberName || !unit) {
+                    skippedRows.push({ line: i + 1, reason: 'Missing name or unit', data: cols.join(', ') });
+                } else {
+                    validRows.push(row);
+                }
+            }
+
+            // Show preview
+            showImportPreview(validRows, skippedRows, delimiter);
+        }
+
+        function showImportPreview(validRows, skippedRows, delimiter) {
+            const preview = document.getElementById('importPreview');
+            const content = document.getElementById('importPreviewContent');
+
+            let html = `
+                <p style="margin-bottom: 0.5rem;"><strong style="color: var(--success);">✓ Valid rows: ${validRows.length}</strong></p>
+                <p style="margin-bottom: 1rem;"><strong style="color: var(--danger);">✗ Skipped rows: ${skippedRows.length}</strong></p>
+            `;
+
+            if (skippedRows.length > 0) {
+                html += `<div style="max-height: 150px; overflow-y: auto; padding: 0.5rem; background: #fee2e2; border-radius: 4px; margin-bottom: 1rem;">`;
+                html += `<p style="font-size: 0.9rem; font-weight: 600; color: var(--danger); margin-bottom: 0.5rem;">Skipped Rows:</p>`;
+                skippedRows.forEach(skip => {
+                    html += `<p style="font-size: 0.85rem; color: var(--text); margin-bottom: 0.25rem;">Line ${skip.line}: ${skip.reason} (${skip.data.substring(0, 50)}...)</p>`;
+                });
+                html += `</div>`;
+            }
+
+            html += `<button type="button" class="btn btn-primary" onclick="confirmImport(${validRows.length})" style="width: 100%;">Confirm Import (${validRows.length} members)</button>`;
+
+            content.innerHTML = html;
+            preview.style.display = 'block';
+
+            // Store valid rows for import
+            window.pendingImportRows = validRows;
+        }
+
+        async function confirmImport(count) {
+            if (!window.pendingImportRows || window.pendingImportRows.length === 0) {
+                alert('No valid rows to import');
+                return;
+            }
+
+            let added = 0;
+            for (const row of window.pendingImportRows) {
+                try {
+                    const formData = {
+                        name: row.name || row['member name'],
+                        unitNumber: row.unit || row['unit/flat number'],
+                        phone: row.phone || undefined,
+                        email: row.email || undefined,
+                        status: (row.status || 'ACTIVE').toUpperCase(),
+                        variables: {
+                            bhk: Number(row.bhk || 0),
+                            sqft: Number(row.sqft || 0),
+                            waterReading: Number(row.water || row.waterreading || 0),
+                            dgReading: Number(row.dg || row.dgreading || 0),
+                            meterReading: Number(row.meter || row.meterreading || 0)
+                        }
+                    };
+
+                    await api.createMember(currentSociety, formData);
+                    added++;
+                } catch (error) {
+                    console.error('Error importing member:', error);
+                }
+            }
+
+            alert(`✓ Import complete! Added: ${added} members`);
+            window.pendingImportRows = null;
+            document.getElementById('importPreview').style.display = 'none';
+            await loadMembers();
+        }
+
+        function downloadSampleCSV() {
+            const sampleData = `name,phone,email,unit,bhk,sqft,waterReading,dgReading,meterReading,status
+John Doe,9876543210,john@example.com,A-101,2,1000,125,35,220,active
+Jane Smith,9876543211,jane@example.com,A-102,3,1500,150,40,250,active
+Bob Wilson,9876543212,bob@example.com,B-201,2,1100,130,38,230,active`;
+
+            const blob = new Blob([sampleData], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'members_sample.csv';
+            a.click();
+            URL.revokeObjectURL(url);
         }
 
         function parseCustomVariables(rawText) {
