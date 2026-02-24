@@ -41,13 +41,13 @@ services:
       - key: LOGIN_RATE_LIMIT_MAX
         value: 10
 
+  - type: redis
+    name: societyflow-redis
+    plan: free
+    ipAllowList: []
+
 databases:
   - name: societyflow-db
     databaseName: societyflow
     user: societyflow
     plan: free
-
-  - name: societyflow-redis
-    type: redis
-    plan: free
-    ipAllowList: []
