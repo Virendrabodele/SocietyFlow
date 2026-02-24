@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { getPrismaClient } from '../config/database';
-import { MonthClosureStatus } from '../generated/prisma';
+import { MonthClosureStatus } from '@prisma/client';
 import { sendSuccessResponse, sendErrorResponse, AppError } from '../utils/response';
 import { createAuditLog } from '../utils/audit';
 import { AuthRequest } from '../middleware/auth';
