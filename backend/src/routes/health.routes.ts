@@ -37,28 +37,35 @@ router.get('/ready', async (req: Request, res: Response) => {
     };
   }
 
-  // Check Redis connection
-  try {
-    const redisStart = Date.now();
-    const redis = new Redis({
-      host: config.redis.host,
-      port: config.redis.port,
-      password: config.redis.password || undefined,
-      maxRetriesPerRequest: 1,
-      connectTimeout: 3000,
-    });
+  // Check Redis connection (only if configured)
+  if (config.redis.host) {
+    try {
+      const redisStart = Date.now();
+      const redis = new Redis({
+        host: config.redis.host,
+        port: config.redis.port,
+        password: config.redis.password || undefined,
+        maxRetriesPerRequest: 1,
+        connectTimeout: 3000,
+      });
 
-    await redis.ping();
+      await redis.ping();
+      checks.redis = {
+        status: 'healthy',
+        responseTime: Date.now() - redisStart,
+      };
+      redis.disconnect();
+    } catch (error) {
+      // Redis is optional, don't fail if not available
+      checks.redis = {
+        status: 'degraded',
+        message: 'Redis not available (optional)',
+      };
+    }
+  } else {
     checks.redis = {
-      status: 'healthy',
-      responseTime: Date.now() - redisStart,
-    };
-    redis.disconnect();
-  } catch (error) {
-    // Redis is optional, don't fail if not available
-    checks.redis = {
-      status: 'degraded',
-      message: 'Redis not available (optional)',
+      status: 'disabled',
+      message: 'Redis not configured',
     };
   }
 
