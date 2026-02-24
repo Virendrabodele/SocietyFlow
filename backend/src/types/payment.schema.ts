@@ -170,8 +170,8 @@ export const createApprovalRequestSchema = z.object({
     entityType: z.string(),
     entityId: z.string().uuid(),
     description: z.string().min(1, 'Description is required'),
-    oldState: z.record(z.unknown()).optional(),
-    newState: z.record(z.unknown()).optional(),
+    oldState: z.record(z.string(), z.unknown()).optional(),
+    newState: z.record(z.string(), z.unknown()).optional(),
   }),
   params: z.object({
     id: z.string().uuid('Invalid society ID'),

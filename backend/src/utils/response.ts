@@ -31,8 +31,8 @@ export const sendErrorResponse = (res: Response, error: unknown): void => {
   }
 };
 
-export const sendSuccessResponse = (res: Response, data: unknown, message = 'Success'): void => {
-  res.status(200).json({
+export const sendSuccessResponse = (res: Response, data: unknown, message = 'Success', statusCode = 200): void => {
+  res.status(statusCode).json({
     success: true,
     message,
     data,

@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { getPrismaClient } from '../config/database';
-import { sendSuccessResponse, sendErrorResponse } from '../utils/response';
-import { AppError } from '../middleware/error-handler';
+import { sendSuccessResponse, sendErrorResponse, AppError } from '../utils/response';
+import { AuthRequest } from '../middleware/auth';
 
 const prisma = getPrismaClient();
 
@@ -12,7 +12,7 @@ const prisma = getPrismaClient();
 /**
  * Get resident dashboard with financial summary
  */
-export const getResidentDashboard = async (req: Request, res: Response) => {
+export const getResidentDashboard = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { societyId } = req.query;
@@ -111,7 +111,7 @@ export const getResidentDashboard = async (req: Request, res: Response) => {
 /**
  * Get invoices for the resident
  */
-export const getResidentInvoices = async (req: Request, res: Response) => {
+export const getResidentInvoices = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { societyId, status, fromMonth, fromYear, toMonth, toYear, page = 1, limit = 50 } = req.query as any;
@@ -249,7 +249,7 @@ export const getResidentInvoices = async (req: Request, res: Response) => {
 /**
  * Get receipts for the resident
  */
-export const getResidentReceipts = async (req: Request, res: Response) => {
+export const getResidentReceipts = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { societyId, fromDate, toDate, page = 1, limit = 50 } = req.query as any;
@@ -348,7 +348,7 @@ export const getResidentReceipts = async (req: Request, res: Response) => {
 /**
  * Get payment submission history for the resident
  */
-export const getResidentPayments = async (req: Request, res: Response) => {
+export const getResidentPayments = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { societyId, status, page = 1, limit = 50 } = req.query as any;
@@ -448,7 +448,7 @@ export const getResidentPayments = async (req: Request, res: Response) => {
 /**
  * Get resident's member profiles across societies
  */
-export const getResidentProfile = async (req: Request, res: Response) => {
+export const getResidentProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
 

@@ -189,7 +189,7 @@ export async function processScheduledReminders(): Promise<void> {
         providerRef = await sendEmail({
           to: job.invoice.member.email,
           subject,
-          body,
+          text: body,
         });
       } else if (job.reminderRule.channel === 'SMS') {
         if (!job.invoice.member.phone) {

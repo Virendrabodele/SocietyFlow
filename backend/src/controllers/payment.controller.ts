@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { getPrismaClient } from '../config/database';
-import { sendSuccessResponse, sendErrorResponse } from '../utils/response';
-import { AppError } from '../middleware/error-handler';
+import { sendSuccessResponse, sendErrorResponse, AppError } from '../utils/response';
+import { AuthRequest } from '../middleware/auth';
 import { encrypt, decrypt, maskAccountNumber, maskIfscCode } from '../utils/encryption';
-import { logAudit } from '../utils/audit';
+import { createAuditLog } from '../utils/audit';
 
 const prisma = getPrismaClient();
 
@@ -14,7 +14,7 @@ const prisma = getPrismaClient();
 /**
  * Create a new bank account for a society
  */
-export const createBankAccount = async (req: Request, res: Response) => {
+export const createBankAccount = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { bankName, accountHolderName, accountNumber, ifscCode, upiId, qrCodeUrl, isDefault } = req.body;
@@ -45,7 +45,7 @@ export const createBankAccount = async (req: Request, res: Response) => {
     });
 
     // Log audit
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'bank_account_create',
@@ -70,7 +70,7 @@ export const createBankAccount = async (req: Request, res: Response) => {
 /**
  * Get all bank accounts for a society
  */
-export const getBankAccounts = async (req: Request, res: Response) => {
+export const getBankAccounts = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { includeInactive } = req.query;
@@ -105,7 +105,7 @@ export const getBankAccounts = async (req: Request, res: Response) => {
 /**
  * Get full bank account details (for payment instructions)
  */
-export const getBankAccountDetails = async (req: Request, res: Response) => {
+export const getBankAccountDetails = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId, accountId } = req.params;
 
@@ -139,7 +139,7 @@ export const getBankAccountDetails = async (req: Request, res: Response) => {
 /**
  * Update bank account
  */
-export const updateBankAccount = async (req: Request, res: Response) => {
+export const updateBankAccount = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId, accountId } = req.params;
     const { bankName, accountHolderName, upiId, qrCodeUrl, isDefault, isActive } = req.body;
@@ -173,7 +173,7 @@ export const updateBankAccount = async (req: Request, res: Response) => {
       },
     });
 
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'bank_account_update',
@@ -202,7 +202,7 @@ export const updateBankAccount = async (req: Request, res: Response) => {
 /**
  * Submit payment proof for an invoice
  */
-export const submitPayment = async (req: Request, res: Response) => {
+export const submitPayment = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId, invoiceId } = req.params;
     const { amount, transactionRef, paidDate, bankAccountId, proofFiles } = req.body;
@@ -260,7 +260,7 @@ export const submitPayment = async (req: Request, res: Response) => {
       });
     }
 
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'payment_submission_create',
@@ -292,7 +292,7 @@ export const submitPayment = async (req: Request, res: Response) => {
 /**
  * Verify or reject payment submission
  */
-export const verifyPaymentSubmission = async (req: Request, res: Response) => {
+export const verifyPaymentSubmission = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId, submissionId } = req.params;
     const { action, verificationNotes, rejectionReason, createReceipt } = req.body;
@@ -372,13 +372,14 @@ export const verifyPaymentSubmission = async (req: Request, res: Response) => {
             societyId,
             invoiceId: submission.invoiceId,
             receiptNo,
+            amountReceived: submission.amount,
             issuedOn: new Date(),
             createdByUserId: userId!,
           },
         });
       }
 
-      await logAudit({
+      await createAuditLog({
         userId: userId!,
         societyId,
         action: 'payment_submission_verify',
@@ -400,7 +401,7 @@ export const verifyPaymentSubmission = async (req: Request, res: Response) => {
         },
       });
 
-      await logAudit({
+      await createAuditLog({
         userId: userId!,
         societyId,
         action: 'payment_submission_reject',
@@ -419,7 +420,7 @@ export const verifyPaymentSubmission = async (req: Request, res: Response) => {
 /**
  * Get payment submissions with filtering
  */
-export const getPaymentSubmissions = async (req: Request, res: Response) => {
+export const getPaymentSubmissions = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { status, invoiceId, fromDate, toDate, page = 1, limit = 50 } = req.query as any;
@@ -482,7 +483,7 @@ export const getPaymentSubmissions = async (req: Request, res: Response) => {
 /**
  * Get payment submission by ID
  */
-export const getPaymentSubmissionById = async (req: Request, res: Response) => {
+export const getPaymentSubmissionById = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId, submissionId } = req.params;
 
