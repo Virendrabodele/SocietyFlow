@@ -11,7 +11,10 @@ const router = Router();
 const loginLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.loginMaxRequests,
-  message: 'Too many login attempts, please try again later',
+  message: JSON.stringify({
+    error: 'Too many login attempts',
+    message: 'Please try again later',
+  }),
   standardHeaders: true,
   legacyHeaders: false,
 });

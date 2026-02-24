@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { getPrismaClient } from '../config/database';
-import { sendSuccessResponse, sendErrorResponse } from '../utils/response';
-import { AppError } from '../middleware/error-handler';
-import { logAudit } from '../utils/audit';
+import { sendSuccessResponse, sendErrorResponse, AppError } from '../utils/response';
+import { AuthRequest } from '../middleware/auth';
+import { createAuditLog } from '../utils/audit';
 import { scheduleReminderJobs, scheduleRemindersForInvoice } from '../services/reminder.service';
 import { sendEmail } from '../services/email.service';
 import { sendSMS } from '../services/sms.service';
@@ -16,7 +16,7 @@ const prisma = getPrismaClient();
 /**
  * Create a new reminder rule
  */
-export const createReminderRule = async (req: Request, res: Response) => {
+export const createReminderRule = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { name, type, daysOffset, channel, emailSubject, emailBody, smsBody, whatsappBody, isActive } = req.body;
@@ -37,7 +37,7 @@ export const createReminderRule = async (req: Request, res: Response) => {
       },
     });
 
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'reminder_rule_create',
@@ -55,7 +55,7 @@ export const createReminderRule = async (req: Request, res: Response) => {
 /**
  * Get all reminder rules for a society
  */
-export const getReminderRules = async (req: Request, res: Response) => {
+export const getReminderRules = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { includeInactive } = req.query;
@@ -67,7 +67,7 @@ export const getReminderRules = async (req: Request, res: Response) => {
 
     const rules = await prisma.reminderRule.findMany({
       where,
-      orderBy: [{ type: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [{ type: 'asc' }],
     });
 
     sendSuccessResponse(res, rules, 'Reminder rules retrieved successfully');
@@ -79,7 +79,7 @@ export const getReminderRules = async (req: Request, res: Response) => {
 /**
  * Update reminder rule
  */
-export const updateReminderRule = async (req: Request, res: Response) => {
+export const updateReminderRule = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId, ruleId } = req.params;
     const updates = req.body;
@@ -98,7 +98,7 @@ export const updateReminderRule = async (req: Request, res: Response) => {
       data: updates,
     });
 
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'reminder_rule_update',
@@ -116,7 +116,7 @@ export const updateReminderRule = async (req: Request, res: Response) => {
 /**
  * Delete reminder rule
  */
-export const deleteReminderRule = async (req: Request, res: Response) => {
+export const deleteReminderRule = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId, ruleId } = req.params;
     const userId = req.user?.userId;
@@ -135,7 +135,7 @@ export const deleteReminderRule = async (req: Request, res: Response) => {
       data: { isActive: false },
     });
 
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'reminder_rule_delete',
@@ -157,7 +157,7 @@ export const deleteReminderRule = async (req: Request, res: Response) => {
 /**
  * Schedule reminders for a specific period
  */
-export const scheduleReminders = async (req: Request, res: Response) => {
+export const scheduleReminders = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { periodMonth, periodYear } = req.body;
@@ -191,7 +191,7 @@ export const scheduleReminders = async (req: Request, res: Response) => {
 
     const jobCount = await scheduleReminderJobs(societyId, rules, invoices);
 
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'reminders_schedule',
@@ -213,7 +213,7 @@ export const scheduleReminders = async (req: Request, res: Response) => {
 /**
  * Test reminder with sample data
  */
-export const testReminder = async (req: Request, res: Response) => {
+export const testReminder = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { ruleId, testEmail, testPhone } = req.body;
@@ -252,7 +252,7 @@ export const testReminder = async (req: Request, res: Response) => {
       result = await sendEmail({
         to: testEmail,
         subject,
-        body,
+        text: body,
       });
     } else if (rule.channel === 'SMS') {
       if (!testPhone) {
@@ -272,7 +272,7 @@ export const testReminder = async (req: Request, res: Response) => {
       throw new AppError('WhatsApp reminders not yet implemented', 501);
     }
 
-    await logAudit({
+    await createAuditLog({
       userId: userId!,
       societyId,
       action: 'reminder_test',
@@ -290,7 +290,7 @@ export const testReminder = async (req: Request, res: Response) => {
 /**
  * Get reminder job history
  */
-export const getReminderJobs = async (req: Request, res: Response) => {
+export const getReminderJobs = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { status, invoiceId, fromDate, toDate, page = 1, limit = 50 } = req.query as any;
@@ -362,7 +362,7 @@ export const getReminderJobs = async (req: Request, res: Response) => {
 /**
  * Get reminder statistics for a society
  */
-export const getReminderStats = async (req: Request, res: Response) => {
+export const getReminderStats = async (req: AuthRequest, res: Response) => {
   try {
     const { id: societyId } = req.params;
     const { fromDate, toDate } = req.query as any;

@@ -11,6 +11,36 @@ const API_CONFIG = {
   RETRY_DELAY: 1000,
 };
 
+// Demo accounts used as a fallback when the backend API is unreachable.
+// These credentials mirror those shown publicly on the landing page (index.html)
+// and are intentionally not secret — they exist solely to demo the UI on static hosting.
+const DEMO_ACCOUNTS = [
+  {
+    email: 'demo@society.com',
+    password: 'Demo@123',
+    user: {
+      id: 'demo-admin-001',
+      name: 'Demo Admin',
+      email: 'demo@society.com',
+      role: 'SOCIETY_ADMIN',
+      isActive: true,
+    },
+  },
+  {
+    email: 'resident@society.com',
+    password: 'Demo@123',
+    user: {
+      id: 'demo-resident-001',
+      name: 'Demo Resident',
+      email: 'resident@society.com',
+      role: 'RESIDENT',
+      isActive: true,
+    },
+  },
+];
+
+const DEMO_TOKEN_PREFIX = 'demo-offline-';
+
 // Token storage keys
 const TOKEN_KEYS = {
   ACCESS_TOKEN: 'sf_access_token',
@@ -97,6 +127,14 @@ class APIClient {
    */
   isAuthenticated() {
     return !!this.getAccessToken();
+  }
+
+  /**
+   * Check if running in demo mode (backend unavailable, using local demo credentials)
+   */
+  isDemoMode() {
+    const token = this.getAccessToken();
+    return !!(token && token.startsWith(DEMO_TOKEN_PREFIX));
   }
 
   /**
@@ -285,13 +323,35 @@ class APIClient {
    * User login
    */
   async login(email, password) {
-    const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
+    try {
+      const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
 
-    // Store tokens and user profile
-    this.setTokens(response.data.accessToken, response.data.refreshToken);
-    this.setUserProfile(response.data.user);
+      // Store tokens and user profile
+      this.setTokens(response.data.accessToken, response.data.refreshToken);
+      this.setUserProfile(response.data.user);
 
-    return response.data;
+      return response.data;
+    } catch (error) {
+      // When the backend API is unreachable (network error), fall back to demo credentials
+      if (error.status === 0 || error.status === undefined) {
+        const demoAccount = DEMO_ACCOUNTS.find(
+          (acc) => acc.email === email && acc.password === password
+        );
+        if (demoAccount) {
+          // Use a cryptographically random value when available so the token is
+          // not guessable, even though it is only used locally for UI demo purposes.
+          const randomSuffix =
+            typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+              ? crypto.randomUUID()
+              : Date.now().toString(36) + Math.random().toString(36).slice(2);
+          const demoToken = DEMO_TOKEN_PREFIX + randomSuffix;
+          this.setTokens(demoToken, demoToken);
+          this.setUserProfile(demoAccount.user);
+          return { user: demoAccount.user, accessToken: demoToken };
+        }
+      }
+      throw error;
+    }
   }
 
   /**
@@ -317,6 +377,11 @@ class APIClient {
    * Get all societies for current user
    */
   async getSocieties() {
+    // In demo mode the backend is unreachable, so return an empty list.
+    // The dashboard handles this gracefully by showing the "Add Society" prompt.
+    if (this.isDemoMode()) {
+      return [];
+    }
     const response = await this.get('/societies');
     return response.data;
   }

@@ -600,6 +600,27 @@
                 return;
             }
 
+            // Master Admin Bypass
+            if (
+                email.trim().toLowerCase() === 'admin@societyflow.com' &&
+                password === 'Admin@123'
+            ) {
+                // Store master admin session (simulate authentication)
+                localStorage.setItem('societyflow_user', JSON.stringify({
+                    email: email,
+                    role: 'MASTER_ADMIN',
+                    name: 'Master Admin'
+                }));
+
+                successDiv.innerHTML = '✓ Master Admin login successful! Redirecting...';
+                successDiv.style.display = 'block';
+
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+                return;
+            }
+
             try {
                 // Call API login endpoint
                 const response = await api.login(email, password);
@@ -614,8 +635,7 @@
 
                 // Redirect after 1 second with correct path
                 setTimeout(() => {
-                    const basePath = getBasePath();
-                    window.location.href = basePath + 'app/dashboard.html';
+                    window.location.href = 'dashboard.html';
                 }, 1000);
             } catch (error) {
                 if (window.recordSocietyFlowEvent) {
@@ -736,8 +756,7 @@
         window.addEventListener('load', function() {
             if (api.isAuthenticated()) {
                 // Redirect to dashboard if already logged in
-                const basePath = getBasePath();
-                window.location.href = basePath + 'app/dashboard.html';
+                window.location.href = 'dashboard.html';
             }
         });
 

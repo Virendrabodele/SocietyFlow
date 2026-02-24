@@ -1,7 +1,8 @@
-import { PrismaClient } from '../src/generated/prisma';
+import { getPrismaClient } from '../src/config/database';
 import { hashPassword } from '../src/utils/password';
+import { BasisType, Frequency, UserRole } from '../src/generated/prisma';
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 async function main() {
   console.log('Starting database seed...');
@@ -13,9 +14,9 @@ async function main() {
     create: {
       name: 'Master Admin',
       email: 'admin@societyflow.com',
-      mobile: '9876543210',
+      mobile: '9922232785',
       passwordHash: await hashPassword('Admin@123'),
-      role: 'MASTER_ADMIN',
+      role: UserRole.MASTER_ADMIN,
       isActive: true,
     },
   });
@@ -62,9 +63,9 @@ async function main() {
     create: {
       name: 'Society Admin',
       email: 'admin@greenpark.com',
-      mobile: '9876543211',
+      mobile: '9922232786',
       passwordHash: await hashPassword('Admin@123'),
-      role: 'SOCIETY_ADMIN',
+      role: UserRole.SOCIETY_ADMIN,
       isActive: true,
     },
   });
@@ -165,25 +166,25 @@ async function main() {
   const lineItems = [
     {
       name: 'Base Maintenance (per BHK)',
-      basisType: 'PER_BHK',
+      basisType: BasisType.PER_BHK,
       rate: 1000,
       taxable: true,
     },
     {
       name: 'Common Area Maintenance',
-      basisType: 'FLAT',
+      basisType: BasisType.FLAT,
       rate: 500,
       taxable: true,
     },
     {
       name: 'Water Charges',
-      basisType: 'FLAT',
+      basisType: BasisType.FLAT,
       rate: 200,
       taxable: false,
     },
     {
       name: 'Electricity (Common)',
-      basisType: 'FLAT',
+      basisType: BasisType.FLAT,
       rate: 300,
       taxable: false,
     },
@@ -195,7 +196,7 @@ async function main() {
         billingHeadId: maintenanceHead.id,
         societyId: society.id,
         ...itemData,
-        frequency: 'MONTHLY',
+        frequency: Frequency.MONTHLY,
         isActive: true,
       },
     });

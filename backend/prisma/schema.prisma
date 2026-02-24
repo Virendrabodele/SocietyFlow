@@ -2,8 +2,9 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider   = "prisma-client-js"
+  output     = "../src/generated/prisma"
+  engineType = "library"
 }
 
 datasource db {
@@ -93,16 +94,6 @@ model Society {
   paymentSubmissions PaymentSubmission[]
   reminderRules      ReminderRule[]
   approvalRequests   ApprovalRequest[]
-  societyAccess       SocietyAccess[]
-  members             Member[]
-  billingHeads        BillingHead[]
-  billingLineItems    BillingLineItem[]
-  invoices            Invoice[]
-  payments            Payment[]
-  receipts            Receipt[]
-  notifications       Notification[]
-  integrations        Integration[]
-  auditLogs           AuditLog[]
   taxConfig           TaxConfig?
   invoiceSeriesConfig InvoiceSeriesConfig?
   receiptSeriesConfig ReceiptSeriesConfig?
@@ -266,11 +257,10 @@ model Invoice {
 
   invoiceNo   String?
   invoiceDate DateTime  @default(now())
-  dueDate     DateTime?
+  dueDate     DateTime?  // Payment due date for reminder calculations
 
   periodMonth Int
   periodYear  Int
-  dueDate     DateTime?  // Payment due date for reminder calculations
 
   subtotal       Float
   taxableAmount  Float   @default(0)
@@ -295,19 +285,14 @@ model Invoice {
 
   // Relations
   lineItems          InvoiceLineItem[]
+  taxLines           InvoiceTaxLine[]
   payments           Payment[]
   receipts           Receipt[]
   notifications      Notification[]
   paymentSubmissions PaymentSubmission[]
   reminderJobs       ReminderJob[]
-
-  lineItems      InvoiceLineItem[]
-  taxLines       InvoiceTaxLine[]
-  payments       Payment[]
-  receipts       Receipt[]
-  notifications  Notification[]
-  paymentUploads PaymentUploadReference[]
-  ledgerEntries  LedgerEntry[]
+  paymentUploads     PaymentUploadReference[]
+  ledgerEntries      LedgerEntry[]
 
   @@unique([societyId, invoiceNo])
   @@unique([societyId, memberId, periodMonth, periodYear])
@@ -571,6 +556,18 @@ model PaymentSubmission {
   verifiedAt        DateTime?
   rejectionReason   String?
   verificationNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  paymentProofs PaymentProof[]
+
+  @@index([societyId])
+  @@index([invoiceId])
+  @@index([status])
+}
+
 // TAX & COMPLIANCE CONFIGURATION
 // ============================================
 
@@ -658,13 +655,7 @@ model ReceiptSeriesConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  paymentProofs PaymentProof[]
-
   @@index([societyId])
-  @@index([invoiceId])
-  @@index([status])
-  @@index([paidDate])
 }
 
 model PaymentProof {
@@ -715,6 +706,10 @@ model ReminderRule {
   emailBody    String?
   smsBody      String?
   whatsappBody String?
+
+  // Relations
+  reminderJobs ReminderJob[]
+
   @@index([societyId])
 }
 
@@ -768,12 +763,9 @@ model PaymentUploadReference {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  reminderJobs ReminderJob[]
-
-  @@index([societyId])
-  @@index([isActive])
-  @@index([type])
+  @@index([invoiceId])
+  @@index([uploadedByUserId])
+  @@index([verificationStatus])
 }
 
 enum ReminderJobStatus {
@@ -845,9 +837,17 @@ model ApprovalRequest {
   // State snapshots for audit
   oldState Json?
   newState Json?
-  @@index([invoiceId])
-  @@index([uploadedByUserId])
-  @@index([verificationStatus])
+
+  // Relations
+  actions ApprovalAction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([societyId])
+  @@index([type])
+  @@index([status])
+  @@index([requestedByUserId])
 }
 
 // ============================================
@@ -917,13 +917,10 @@ model MonthClosure {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  actions ApprovalAction[]
-
+  @@unique([societyId, periodMonth, periodYear])
   @@index([societyId])
   @@index([status])
-  @@index([type])
-  @@index([requestedByUserId])
+  @@index([periodMonth, periodYear])
 }
 
 enum ApprovalActionType {
@@ -945,10 +942,6 @@ model ApprovalAction {
 
   @@index([approvalRequestId])
   @@index([actionByUserId])
-  @@unique([societyId, periodMonth, periodYear])
-  @@index([societyId])
-  @@index([status])
-  @@index([periodMonth, periodYear])
 }
 
 // ============================================
