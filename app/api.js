@@ -9,7 +9,7 @@ const API_BASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.api && CONFIG.api.
   ? CONFIG.api.baseURL
   : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3000/api/v1'
-      : 'https://societyflow-api.onrender.com');
+      : 'https://societyflow-api.onrender.com'); // ← UPDATE with your Render URL
 
 const API_CONFIG = {
   BASE_URL: API_BASE_URL,
