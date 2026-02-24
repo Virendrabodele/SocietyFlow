@@ -562,11 +562,12 @@
 
         // Tab switching
         function switchTab(tabName) {
+            const tabOrder = ['login', 'signup'];
             document.querySelectorAll('.form-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.form-tab').forEach(btn => btn.classList.remove('active'));
-            
+            document.querySelectorAll('.form-tab').forEach((btn, i) => {
+                btn.classList.toggle('active', tabOrder[i] === tabName);
+            });
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
         }
 
         // Toggle password visibility

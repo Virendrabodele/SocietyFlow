@@ -100,11 +100,21 @@ class APIClient {
   }
 
   /**
+   * Get the correct path to the login page (works on GitHub Pages and locally)
+   */
+  _getLoginPath() {
+    if (typeof window !== 'undefined' && window.location.pathname.includes('/SocietyFlow/')) {
+      return '/SocietyFlow/app/login.html';
+    }
+    return '/app/login.html';
+  }
+
+  /**
    * Redirect to login if not authenticated
    */
   requireAuth() {
     if (!this.isAuthenticated()) {
-      window.location.href = '/app/login.html';
+      window.location.href = this._getLoginPath();
       return false;
     }
     return true;
@@ -155,7 +165,7 @@ class APIClient {
       return data.data.accessToken;
     } catch (error) {
       this.clearAuth();
-      window.location.href = '/app/login.html';
+      window.location.href = this._getLoginPath();
       throw error;
     }
   }
@@ -271,27 +281,154 @@ class APIClient {
     return this.request(endpoint, { ...options, method: 'DELETE' });
   }
 
+  // ==================== LOCAL STORAGE FALLBACK (offline/demo mode) ====================
+
+  /**
+   * Check if an error is a network connectivity error (backend unreachable)
+   */
+  _isNetworkError(error) {
+    return error && error.status === 0;
+  }
+
+  /**
+   * Get all locally stored users
+   */
+  _getLocalUsers() {
+    try {
+      return JSON.parse(localStorage.getItem('sf_local_users') || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * Save users to local storage
+   */
+  _saveLocalUsers(users) {
+    localStorage.setItem('sf_local_users', JSON.stringify(users));
+  }
+
+  /**
+   * Generate a simple local session token
+   */
+  _generateLocalToken(userId) {
+    const payload = { userId, t: Date.now() };
+    return 'local_' + btoa(JSON.stringify(payload));
+  }
+
+  /**
+   * Register a user locally (fallback when API is unavailable).
+   * NOTE: Passwords are stored in localStorage for offline/demo mode only.
+   * This is NOT suitable for production - use the backend API for real deployments.
+   */
+  _localRegister(userData) {
+    const users = this._getLocalUsers();
+    if (users.find(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
+      throw { status: 409, message: 'Email already registered', errors: [] };
+    }
+    const newUser = {
+      id: 'local_' + Date.now(),
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role || 'RESIDENT',
+      createdAt: new Date().toISOString(),
+    };
+    users.push(newUser);
+    this._saveLocalUsers(users);
+    return { user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role } };
+  }
+
+  /**
+   * Authenticate a user locally (fallback when API is unavailable).
+   * NOTE: Password comparison uses plain text stored in localStorage (offline/demo mode only).
+   * This is NOT suitable for production - use the backend API for real deployments.
+   */
+  _localLogin(email, password) {
+    const users = this._getLocalUsers();
+    const user = users.find(
+      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    );
+    if (!user) {
+      throw { status: 401, message: 'Invalid email or password', errors: [] };
+    }
+    const token = this._generateLocalToken(user.id);
+    return {
+      accessToken: token,
+      refreshToken: token + '_r',
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    };
+  }
+
+  /**
+   * Get societies for the current user from local storage
+   */
+  _getLocalSocieties(userId) {
+    try {
+      const all = JSON.parse(localStorage.getItem('sf_local_societies') || '[]');
+      return all.filter(s => s.userId === userId);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * Save a new society to local storage
+   */
+  _saveLocalSociety(society, userId) {
+    try {
+      const all = JSON.parse(localStorage.getItem('sf_local_societies') || '[]');
+      all.push({ ...society, userId });
+      localStorage.setItem('sf_local_societies', JSON.stringify(all));
+    } catch (e) {}
+  }
+
+  /**
+   * Delete a society from local storage
+   */
+  _deleteLocalSociety(societyId, userId) {
+    try {
+      const all = JSON.parse(localStorage.getItem('sf_local_societies') || '[]');
+      const updated = all.filter(s => !(s.id === societyId && s.userId === userId));
+      localStorage.setItem('sf_local_societies', JSON.stringify(updated));
+    } catch (e) {}
+  }
+
   // ==================== AUTH ENDPOINTS ====================
 
   /**
    * User registration
    */
   async register(userData) {
-    const response = await this.post('/auth/register', userData, { includeAuth: false });
-    return response.data;
+    try {
+      const response = await this.post('/auth/register', userData, { includeAuth: false });
+      return response.data;
+    } catch (error) {
+      if (this._isNetworkError(error)) {
+        return this._localRegister(userData);
+      }
+      throw error;
+    }
   }
 
   /**
    * User login
    */
   async login(email, password) {
-    const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
-
-    // Store tokens and user profile
-    this.setTokens(response.data.accessToken, response.data.refreshToken);
-    this.setUserProfile(response.data.user);
-
-    return response.data;
+    try {
+      const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
+      this.setTokens(response.data.accessToken, response.data.refreshToken);
+      this.setUserProfile(response.data.user);
+      return response.data;
+    } catch (error) {
+      if (this._isNetworkError(error)) {
+        const data = this._localLogin(email, password);
+        this.setTokens(data.accessToken, data.refreshToken);
+        this.setUserProfile(data.user);
+        return data;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -307,7 +444,7 @@ class APIClient {
       console.error('Logout error:', error);
     } finally {
       this.clearAuth();
-      window.location.href = '/app/login.html';
+      window.location.href = this._getLoginPath();
     }
   }
 
@@ -317,8 +454,16 @@ class APIClient {
    * Get all societies for current user
    */
   async getSocieties() {
-    const response = await this.get('/societies');
-    return response.data;
+    try {
+      const response = await this.get('/societies');
+      return response.data;
+    } catch (error) {
+      if (this._isNetworkError(error)) {
+        const user = this.getUserProfile();
+        return user ? this._getLocalSocieties(user.id) : [];
+      }
+      throw error;
+    }
   }
 
   /**
@@ -333,8 +478,33 @@ class APIClient {
    * Create new society
    */
   async createSociety(societyData) {
-    const response = await this.post('/societies', societyData);
-    return response.data;
+    try {
+      const response = await this.post('/societies', societyData);
+      return response.data;
+    } catch (error) {
+      if (this._isNetworkError(error)) {
+        const user = this.getUserProfile();
+        const addressParts = (societyData.address || '').split(',');
+        const newSociety = {
+          id: 'local_' + Date.now(),
+          name: societyData.name,
+          address: societyData.address || '',
+          city: addressParts[0] ? addressParts[0].trim() : '',
+          state: addressParts[1] ? addressParts[1].trim() : '',
+          totalUnits: societyData.totalUnits || 0,
+          units: societyData.totalUnits || 0,
+          contactEmail: societyData.contactEmail || '',
+          contactPhone: societyData.contactPhone || '',
+          _count: { members: 0 },
+          createdAt: new Date().toISOString(),
+        };
+        if (user) {
+          this._saveLocalSociety(newSociety, user.id);
+        }
+        return newSociety;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -349,8 +519,19 @@ class APIClient {
    * Delete society
    */
   async deleteSociety(societyId) {
-    const response = await this.delete(`/societies/${societyId}`);
-    return response.data;
+    try {
+      const response = await this.delete(`/societies/${societyId}`);
+      return response.data;
+    } catch (error) {
+      if (this._isNetworkError(error)) {
+        const user = this.getUserProfile();
+        if (user) {
+          this._deleteLocalSociety(societyId, user.id);
+        }
+        return {};
+      }
+      throw error;
+    }
   }
 
   // ==================== MEMBER ENDPOINTS ====================
