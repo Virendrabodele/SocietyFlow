@@ -19,6 +19,7 @@ import residentRoutes from './routes/resident.routes';
 import complianceRoutes from './routes/compliance.routes';
 import reportsRoutes from './routes/reports.routes';
 import bankAccountRoutes from './routes/bank-account.routes';
+import seedRoutes from './routes/seed.routes';
 
 const app: Application = express();
 
@@ -63,6 +64,8 @@ app.use(`${apiPrefix}/resident`, residentRoutes);
 app.use(`${apiPrefix}/societies`, complianceRoutes);
 app.use(`${apiPrefix}/societies`, reportsRoutes);
 app.use(`${apiPrefix}/societies`, bankAccountRoutes);
+app.use('/seed', seedRoutes);
+
 
 // 404 handler
 app.use((req: Request, res: Response) => {
