@@ -1,5 +1,5 @@
 import { getPrismaClient } from '../config/database';
-import { Prisma } from '../generated/prisma';
+import { Prisma } from '@prisma/client';
 
 interface AuditLogData {
   userId: string;
