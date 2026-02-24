@@ -487,7 +487,7 @@ class APIClient {
   }
 
   /**
-   * Delete billing head
+   * Delete billing head 
    */
   async deleteBillingHead(societyId, billingHeadId) {
     const response = await this.delete(`/societies/${societyId}/billing/${billingHeadId}`);
