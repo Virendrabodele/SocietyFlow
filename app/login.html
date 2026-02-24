@@ -578,74 +578,67 @@
         // ═══════════════════════════════════════════════════════════════
         // LOGIN HANDLER - API-based authentication
         // ═══════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
+        // LOGIN HANDLER - Fixed version
+        // Changes:
+        // 1. Removed broken Master Admin bypass (used wrong localStorage key)
+        // 2. All logins now go through api.login() which handles demo fallback
+        // 3. Redirect uses relative path for GitHub Pages compatibility
+        // ═══════════════════════════════════════════════════════════════
         async function handleLogin() {
-            const email = document.getElementById('loginEmail').value;
+            const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
             const successDiv = document.getElementById('loginSuccess');
-
+        
             errorDiv.style.display = 'none';
             successDiv.style.display = 'none';
-
-            // Validation
+        
             if (!email || !password) {
                 errorDiv.innerHTML = '❌ Please fill in all fields';
                 errorDiv.style.display = 'block';
                 return;
             }
-
+        
             if (!email.includes('@')) {
                 errorDiv.innerHTML = '❌ Invalid email address';
                 errorDiv.style.display = 'block';
                 return;
             }
-
-            // Master Admin Bypass
-            if (
-                email.trim().toLowerCase() === 'admin@societyflow.com' &&
-                password === 'Admin@123'
-            ) {
-                // Store master admin session (simulate authentication)
-                localStorage.setItem('societyflow_user', JSON.stringify({
-                    email: email,
-                    role: 'MASTER_ADMIN',
-                    name: 'Master Admin'
-                }));
-
-                successDiv.innerHTML = '✓ Master Admin login successful! Redirecting...';
-                successDiv.style.display = 'block';
-
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
-                return;
-            }
-
+        
+            // Show loading state
+            const signInBtn = document.querySelector('.btn-primary');
+            const originalText = signInBtn.textContent;
+            signInBtn.textContent = 'Signing in...';
+            signInBtn.disabled = true;
+        
             try {
-                // Call API login endpoint
+                // api.login() handles: real backend → demo fallback → error
                 const response = await api.login(email, password);
-
-                successDiv.innerHTML = '✓ Login successful! Redirecting...';
+        
+                const modeMsg = response.isDemoMode ? ' (Demo Mode)' : '';
+                successDiv.innerHTML = `✓ Login successful${modeMsg}! Redirecting...`;
                 successDiv.style.display = 'block';
-
-                // Record activity
+        
                 if (window.recordSocietyFlowEvent) {
-                    window.recordSocietyFlowEvent('login_success', { email: email });
+                    window.recordSocietyFlowEvent('login_success', { email });
                 }
-
-                // Redirect after 1 second with correct path
+        
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1000);
+        
             } catch (error) {
                 if (window.recordSocietyFlowEvent) {
-                    window.recordSocietyFlowEvent('login_failed', { email: email });
+                    window.recordSocietyFlowEvent('login_failed', { email });
                 }
                 errorDiv.innerHTML = `❌ ${error.message || 'Login failed. Please try again.'}`;
                 errorDiv.style.display = 'block';
+            } finally {
+                signInBtn.textContent = originalText;
+                signInBtn.disabled = false;
             }
         }
-
         // ═══════════════════════════════════════════════════════════════
         // SIGNUP HANDLER - API-based registration
         // ═══════════════════════════════════════════════════════════════
