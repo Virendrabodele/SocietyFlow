@@ -325,11 +325,7 @@ class APIClient {
     if (this.isDemoMode()) {
       console.log('📱 Demo mode: Loading societies from localStorage');
       const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-      return {
-        data: demoDemoSocieties,
-        success: true,
-        isDemoMode: true,
-      };
+      return demoDemoSocieties;  // ✅ Return just the array
     }
 
     try {
@@ -361,11 +357,7 @@ class APIClient {
       demoDemoSocieties.push(newSociety);
       localStorage.setItem('demo_societies', JSON.stringify(demoDemoSocieties));
 
-      return {
-        data: newSociety,
-        success: true,
-        isDemoMode: true,
-      };
+      return newSociety;  // ✅ Return just the society object
     }
 
     try {
@@ -385,10 +377,7 @@ class APIClient {
       const filtered = demoDemoSocieties.filter(s => s.id !== societyId);
       localStorage.setItem('demo_societies', JSON.stringify(filtered));
 
-      return {
-        success: true,
-        isDemoMode: true,
-      };
+      return { success: true };  // ✅ Return status object
     }
 
     try {
@@ -404,10 +393,11 @@ class APIClient {
 
   async getMembers(societyId) {
     if (this.isDemoMode()) {
-      return { data: [], success: true, isDemoMode: true };
+      return [];  // ✅ Return just the array
     }
     try {
-      return await this.get(`/societies/${societyId}/members`);
+      const response = await this.get(`/societies/${societyId}/members`);
+      return response.data || response;
     } catch (error) {
       console.error('Error fetching members:', error);
       throw error;
@@ -417,14 +407,11 @@ class APIClient {
   async createMember(societyId, data) {
     if (this.isDemoMode()) {
       const memberId = 'demo-member-' + Date.now();
-      return {
-        data: { id: memberId, ...data, isDemoMode: true },
-        success: true,
-        isDemoMode: true,
-      };
+      return { id: memberId, ...data, isDemoMode: true };  // ✅ Return just the member object
     }
     try {
-      return await this.post(`/societies/${societyId}/members`, data);
+      const response = await this.post(`/societies/${societyId}/members`, data);
+      return response.data || response;
     } catch (error) {
       console.error('Error creating member:', error);
       throw error;
@@ -435,11 +422,12 @@ class APIClient {
 
   async getInvoices(societyId, params = {}) {
     if (this.isDemoMode()) {
-      return { data: [], success: true, isDemoMode: true };
+      return [];  // ✅ Return just the array
     }
     try {
       const query = new URLSearchParams(params).toString();
-      return await this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
+      const response = await this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
+      return response.data || response;
     } catch (error) {
       console.error('Error fetching invoices:', error);
       throw error;
