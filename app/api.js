@@ -326,32 +326,128 @@ class APIClient {
 
   // ==================== SOCIETY ENDPOINTS ====================
 
-  async getSocieties() {
-    return this.get('/societies');
-  }
+ // ==================== SOCIETY ENDPOINTS ====================
 
-  async createSociety(data) {
-    return this.post('/societies', data);
-  }
-
-  // ==================== MEMBER ENDPOINTS ====================
-
-  async getMembers(societyId) {
-    return this.get(`/societies/${societyId}/members`);
-  }
-
-  async createMember(societyId, data) {
-    return this.post(`/societies/${societyId}/members`, data);
-  }
-
-  // ==================== INVOICE ENDPOINTS ====================
-
-  async getInvoices(societyId, params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
+async getSocieties() {
+  try {
+    const response = await this.get('/societies');
+    return response.data || response;
+  } catch (error) {
+    // ✅ Demo mode fallback: Return demo societies from localStorage
+    if (error.status === 0 || error.status === undefined) {
+      if (this.isDemoMode()) {
+        // Return societies from localStorage (if any)
+        const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+        return {
+          data: demoDemoSocieties,
+          success: true,
+          isDemoMode: true,
+        };
+      }
+    }
+    throw error;
   }
 }
 
+async createSociety(data) {
+  try {
+    const response = await this.post('/societies', data);
+    return response.data || response;
+  } catch (error) {
+    // ✅ Demo mode fallback: Create society in localStorage
+    if (error.status === 0 || error.status === undefined) {
+      if (this.isDemoMode()) {
+        // Generate a unique ID for demo society
+        const societyId = 'demo-society-' + Date.now();
+        const newSociety = {
+          id: societyId,
+          name: data.name,
+          address: data.address,
+          totalUnits: data.totalUnits,
+          contactEmail: data.contactEmail,
+          contactPhone: data.contactPhone,
+          createdAt: new Date().toISOString(),
+          isDemoMode: true,
+        };
+
+        // Store in localStorage
+        const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+        demoDemoSocieties.push(newSociety);
+        localStorage.setItem('demo_societies', JSON.stringify(demoDemoSocieties));
+
+        return {
+          data: newSociety,
+          success: true,
+          isDemoMode: true,
+        };
+      }
+    }
+    throw error;
+  }
+}
+
+async deleteSociety(societyId) {
+  try {
+    const response = await this.delete(`/societies/${societyId}`);
+    return response.data || response;
+  } catch (error) {
+    // ✅ Demo mode fallback: Delete from localStorage
+    if (error.status === 0 || error.status === undefined) {
+      if (this.isDemoMode()) {
+        const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+        const filtered = demoDemoSocieties.filter(s => s.id !== societyId);
+        localStorage.setItem('demo_societies', JSON.stringify(filtered));
+
+        return {
+          success: true,
+          isDemoMode: true,
+        };
+      }
+    }
+    throw error;
+  }
+}
+  // ==================== MEMBER ENDPOINTS ====================
+
+ async getMembers(societyId) {
+  try {
+    return await this.get(`/societies/${societyId}/members`);
+  } catch (error) {
+    if (this.isDemoMode()) {
+      return { data: [], success: true, isDemoMode: true };
+    }
+    throw error;
+  }
+}
+
+async createMember(societyId, data) {
+  try {
+    return await this.post(`/societies/${societyId}/members`, data);
+  } catch (error) {
+    if (this.isDemoMode()) {
+      const memberId = 'demo-member-' + Date.now();
+      return {
+        data: { id: memberId, ...data, isDemoMode: true },
+        success: true,
+        isDemoMode: true,
+      };
+    }
+    throw error;
+  }
+}
+  // ==================== INVOICE ENDPOINTS ====================
+
+async getInvoices(societyId, params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    return await this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
+  } catch (error) {
+    if (this.isDemoMode()) {
+      return { data: [], success: true, isDemoMode: true };
+    }
+    throw error;
+  }
+}
 // Create global instance
 const api = new APIClient();
 
