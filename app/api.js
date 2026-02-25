@@ -1,10 +1,10 @@
 /**
  * SocietyFlow API Client
  * Centralized API helper for communicating with the backend
- * FIXED VERSION - Checks demo mode BEFORE API calls
+ * FINAL VERSION - Proper response handling for both real API and demo mode
  */
 
-// ─── FIX 1: Use config.js baseURL instead of hardcoded localhost ───
+// Configuration
 const API_BASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.api && CONFIG.api.baseURL)
   ? CONFIG.api.baseURL
   : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -57,7 +57,6 @@ const DEMO_ACCOUNTS = [
 
 const DEMO_TOKEN_PREFIX = 'demo-offline-';
 
-// Token storage keys
 const TOKEN_KEYS = {
   ACCESS_TOKEN: 'sf_access_token',
   REFRESH_TOKEN: 'sf_refresh_token',
@@ -273,13 +272,11 @@ class APIClient {
       this.setUserProfile(response.data.user);
       return response.data;
     } catch (error) {
-      // Demo mode fallback
       if (error.status === 0 || error.status === undefined) {
         const demoAccount = DEMO_ACCOUNTS.find(
           (acc) => acc.email === email && acc.password === password
         );
         if (demoAccount) {
-          // Generate BOTH access token and refresh token for demo mode
           const demoAccessToken = DEMO_TOKEN_PREFIX + (
             typeof crypto !== 'undefined' && crypto.randomUUID
               ? crypto.randomUUID()
@@ -321,16 +318,15 @@ class APIClient {
   // ==================== SOCIETY ENDPOINTS ====================
 
   async getSocieties() {
-    // ✅ FIX: Check demo mode BEFORE calling API
     if (this.isDemoMode()) {
       console.log('📱 Demo mode: Loading societies from localStorage');
-      const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-      return demoDemoSocieties;  // ✅ Return just the array
+      return JSON.parse(localStorage.getItem('demo_societies') || '[]');
     }
 
     try {
       const response = await this.get('/societies');
-      return response.data || response;
+      // If response has .data, return it; otherwise return response
+      return Array.isArray(response) ? response : (response.data || []);
     } catch (error) {
       console.error('Error fetching societies:', error);
       throw error;
@@ -338,7 +334,6 @@ class APIClient {
   }
 
   async createSociety(data) {
-    // ✅ FIX: Check demo mode BEFORE calling API
     if (this.isDemoMode()) {
       console.log('📱 Demo mode: Creating society in localStorage');
       const societyId = 'demo-society-' + Date.now();
@@ -353,11 +348,11 @@ class APIClient {
         isDemoMode: true,
       };
 
-      const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-      demoDemoSocieties.push(newSociety);
-      localStorage.setItem('demo_societies', JSON.stringify(demoDemoSocieties));
+      const societies = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+      societies.push(newSociety);
+      localStorage.setItem('demo_societies', JSON.stringify(societies));
 
-      return newSociety;  // ✅ Return just the society object
+      return newSociety;
     }
 
     try {
@@ -370,14 +365,13 @@ class APIClient {
   }
 
   async deleteSociety(societyId) {
-    // ✅ FIX: Check demo mode BEFORE calling API
     if (this.isDemoMode()) {
       console.log('📱 Demo mode: Deleting society from localStorage');
-      const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-      const filtered = demoDemoSocieties.filter(s => s.id !== societyId);
+      const societies = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+      const filtered = societies.filter(s => s.id !== societyId);
       localStorage.setItem('demo_societies', JSON.stringify(filtered));
 
-      return { success: true };  // ✅ Return status object
+      return { success: true };
     }
 
     try {
@@ -393,11 +387,11 @@ class APIClient {
 
   async getMembers(societyId) {
     if (this.isDemoMode()) {
-      return [];  // ✅ Return just the array
+      return [];
     }
     try {
       const response = await this.get(`/societies/${societyId}/members`);
-      return response.data || response;
+      return Array.isArray(response) ? response : (response.data || []);
     } catch (error) {
       console.error('Error fetching members:', error);
       throw error;
@@ -407,7 +401,7 @@ class APIClient {
   async createMember(societyId, data) {
     if (this.isDemoMode()) {
       const memberId = 'demo-member-' + Date.now();
-      return { id: memberId, ...data, isDemoMode: true };  // ✅ Return just the member object
+      return { id: memberId, ...data, isDemoMode: true };
     }
     try {
       const response = await this.post(`/societies/${societyId}/members`, data);
@@ -422,12 +416,12 @@ class APIClient {
 
   async getInvoices(societyId, params = {}) {
     if (this.isDemoMode()) {
-      return [];  // ✅ Return just the array
+      return [];
     }
     try {
       const query = new URLSearchParams(params).toString();
       const response = await this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
-      return response.data || response;
+      return Array.isArray(response) ? response : (response.data || []);
     } catch (error) {
       console.error('Error fetching invoices:', error);
       throw error;
