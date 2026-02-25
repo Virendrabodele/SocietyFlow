@@ -1,15 +1,15 @@
 /**
  * SocietyFlow API Client
  * Centralized API helper for communicating with the backend
+ * COMPLETE VERSION WITH ALL FIXES APPLIED
  */
 
 // ─── FIX 1: Use config.js baseURL instead of hardcoded localhost ───
-// CONFIG is loaded by config.js which is included before api.js in every HTML page
 const API_BASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.api && CONFIG.api.baseURL)
   ? CONFIG.api.baseURL
   : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3000/api/v1'
-      : 'https://societyflow-api.onrender.com'); // ← UPDATE with your Render URL
+      : 'https://societyflow-api.onrender.com');
 
 const API_CONFIG = {
   BASE_URL: API_BASE_URL,
@@ -18,7 +18,7 @@ const API_CONFIG = {
   RETRY_DELAY: 1000,
 };
 
-// Demo accounts used as a fallback when the backend API is unreachable.
+// Demo accounts - fallback when backend is unreachable
 const DEMO_ACCOUNTS = [
   {
     email: 'demo@society.com',
@@ -42,7 +42,6 @@ const DEMO_ACCOUNTS = [
       isActive: true,
     },
   },
-  // ─── FIX 2: Add master admin to demo accounts so the bypass in login.html works ───
   {
     email: 'admin@societyflow.com',
     password: 'Admin@123',
@@ -113,7 +112,6 @@ class APIClient {
     localStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(TOKEN_KEYS.USER_PROFILE);
     localStorage.removeItem(TOKEN_KEYS.CURRENT_SOCIETY);
-    // ─── FIX 3: Also clear legacy key used by master admin bypass ───
     localStorage.removeItem('societyflow_user');
   }
 
@@ -126,10 +124,8 @@ class APIClient {
     return !!(token && token.startsWith(DEMO_TOKEN_PREFIX));
   }
 
-  // ─── FIX 4: Use relative path for redirect so it works on GitHub Pages ───
   requireAuth() {
     if (!this.isAuthenticated()) {
-      // Use relative path - works on GitHub Pages and localhost
       const loginPath = window.location.pathname.includes('/SocietyFlow/')
         ? '/SocietyFlow/app/login.html'
         : './login.html';
@@ -190,7 +186,6 @@ class APIClient {
 
   async request(endpoint, options = {}) {
     const { method = 'GET', body = null, includeAuth = true, retry = 0 } = options;
-
     const url = `${this.baseURL}${endpoint}`;
     const headers = this.getHeaders(includeAuth);
     const requestOptions = { method, headers };
@@ -272,46 +267,46 @@ class APIClient {
   }
 
   async login(email, password) {
-  try {
-    const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
-    this.setTokens(response.data.accessToken, response.data.refreshToken);
-    this.setUserProfile(response.data.user);
-    return response.data;
-  } catch (error) {
-    // Fall back to demo accounts when backend unreachable
-    if (error.status === 0 || error.status === undefined) {
-      const demoAccount = DEMO_ACCOUNTS.find(
-        (acc) => acc.email === email && acc.password === password
-      );
-      if (demoAccount) {
-        // ✅ Generate BOTH access token AND refresh token for demo mode
-        const demoAccessToken = DEMO_TOKEN_PREFIX + (
-          typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : Math.random().toString(36).substring(2)
+    try {
+      const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
+      this.setTokens(response.data.accessToken, response.data.refreshToken);
+      this.setUserProfile(response.data.user);
+      return response.data;
+    } catch (error) {
+      // Demo mode fallback
+      if (error.status === 0 || error.status === undefined) {
+        const demoAccount = DEMO_ACCOUNTS.find(
+          (acc) => acc.email === email && acc.password === password
         );
-        const demoRefreshToken = DEMO_TOKEN_PREFIX + (
-          typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : Math.random().toString(36).substring(2)
-        );
-        
-        // ✅ Store both tokens
-        this.setTokens(demoAccessToken, demoRefreshToken);
-        this.setUserProfile(demoAccount.user);
-        
-        return { 
-          user: demoAccount.user, 
-          accessToken: demoAccessToken, 
-          refreshToken: demoRefreshToken,  // ✅ Include refresh token in response
-          isDemoMode: true 
-        };
+        if (demoAccount) {
+          // ✅ FIX: Generate BOTH access token and refresh token
+          const demoAccessToken = DEMO_TOKEN_PREFIX + (
+            typeof crypto !== 'undefined' && crypto.randomUUID
+              ? crypto.randomUUID()
+              : Math.random().toString(36).substring(2)
+          );
+          const demoRefreshToken = DEMO_TOKEN_PREFIX + (
+            typeof crypto !== 'undefined' && crypto.randomUUID
+              ? crypto.randomUUID()
+              : Math.random().toString(36).substring(2)
+          );
+
+          // ✅ FIX: Store both tokens
+          this.setTokens(demoAccessToken, demoRefreshToken);
+          this.setUserProfile(demoAccount.user);
+
+          return {
+            user: demoAccount.user,
+            accessToken: demoAccessToken,
+            refreshToken: demoRefreshToken,
+            isDemoMode: true,
+          };
+        }
       }
+      throw error;
     }
-    throw error;
   }
-}
-  
+
   async logout() {
     try {
       if (!this.isDemoMode()) {
@@ -326,131 +321,130 @@ class APIClient {
 
   // ==================== SOCIETY ENDPOINTS ====================
 
- // ==================== SOCIETY ENDPOINTS ====================
-
-async getSocieties() {
-  try {
-    const response = await this.get('/societies');
-    return response.data || response;
-  } catch (error) {
-    // ✅ Demo mode fallback: Return demo societies from localStorage
-    if (error.status === 0 || error.status === undefined) {
-      if (this.isDemoMode()) {
-        // Return societies from localStorage (if any)
-        const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-        return {
-          data: demoDemoSocieties,
-          success: true,
-          isDemoMode: true,
-        };
+  async getSocieties() {
+    try {
+      const response = await this.get('/societies');
+      return response.data || response;
+    } catch (error) {
+      // ✅ Demo mode fallback
+      if (error.status === 0 || error.status === undefined) {
+        if (this.isDemoMode()) {
+          const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+          return {
+            data: demoDemoSocieties,
+            success: true,
+            isDemoMode: true,
+          };
+        }
       }
+      throw error;
     }
-    throw error;
   }
-}
 
-async createSociety(data) {
-  try {
-    const response = await this.post('/societies', data);
-    return response.data || response;
-  } catch (error) {
-    // ✅ Demo mode fallback: Create society in localStorage
-    if (error.status === 0 || error.status === undefined) {
-      if (this.isDemoMode()) {
-        // Generate a unique ID for demo society
-        const societyId = 'demo-society-' + Date.now();
-        const newSociety = {
-          id: societyId,
-          name: data.name,
-          address: data.address,
-          totalUnits: data.totalUnits,
-          contactEmail: data.contactEmail,
-          contactPhone: data.contactPhone,
-          createdAt: new Date().toISOString(),
-          isDemoMode: true,
-        };
+  async createSociety(data) {
+    try {
+      const response = await this.post('/societies', data);
+      return response.data || response;
+    } catch (error) {
+      // ✅ Demo mode fallback
+      if (error.status === 0 || error.status === undefined) {
+        if (this.isDemoMode()) {
+          const societyId = 'demo-society-' + Date.now();
+          const newSociety = {
+            id: societyId,
+            name: data.name,
+            address: data.address,
+            totalUnits: data.totalUnits,
+            contactEmail: data.contactEmail,
+            contactPhone: data.contactPhone,
+            createdAt: new Date().toISOString(),
+            isDemoMode: true,
+          };
 
-        // Store in localStorage
-        const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-        demoDemoSocieties.push(newSociety);
-        localStorage.setItem('demo_societies', JSON.stringify(demoDemoSocieties));
+          const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+          demoDemoSocieties.push(newSociety);
+          localStorage.setItem('demo_societies', JSON.stringify(demoDemoSocieties));
 
-        return {
-          data: newSociety,
-          success: true,
-          isDemoMode: true,
-        };
+          return {
+            data: newSociety,
+            success: true,
+            isDemoMode: true,
+          };
+        }
       }
+      throw error;
     }
-    throw error;
   }
-}
 
-async deleteSociety(societyId) {
-  try {
-    const response = await this.delete(`/societies/${societyId}`);
-    return response.data || response;
-  } catch (error) {
-    // ✅ Demo mode fallback: Delete from localStorage
-    if (error.status === 0 || error.status === undefined) {
-      if (this.isDemoMode()) {
-        const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-        const filtered = demoDemoSocieties.filter(s => s.id !== societyId);
-        localStorage.setItem('demo_societies', JSON.stringify(filtered));
+  async deleteSociety(societyId) {
+    try {
+      const response = await this.delete(`/societies/${societyId}`);
+      return response.data || response;
+    } catch (error) {
+      // ✅ Demo mode fallback
+      if (error.status === 0 || error.status === undefined) {
+        if (this.isDemoMode()) {
+          const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+          const filtered = demoDemoSocieties.filter(s => s.id !== societyId);
+          localStorage.setItem('demo_societies', JSON.stringify(filtered));
 
-        return {
-          success: true,
-          isDemoMode: true,
-        };
+          return {
+            success: true,
+            isDemoMode: true,
+          };
+        }
       }
+      throw error;
     }
-    throw error;
   }
-}
+
   // ==================== MEMBER ENDPOINTS ====================
 
- async getMembers(societyId) {
-  try {
-    return await this.get(`/societies/${societyId}/members`);
-  } catch (error) {
-    if (this.isDemoMode()) {
-      return { data: [], success: true, isDemoMode: true };
+  async getMembers(societyId) {
+    try {
+      return await this.get(`/societies/${societyId}/members`);
+    } catch (error) {
+      if (this.isDemoMode()) {
+        return { data: [], success: true, isDemoMode: true };
+      }
+      throw error;
     }
-    throw error;
   }
-}
 
-async createMember(societyId, data) {
-  try {
-    return await this.post(`/societies/${societyId}/members`, data);
-  } catch (error) {
-    if (this.isDemoMode()) {
-      const memberId = 'demo-member-' + Date.now();
-      return {
-        data: { id: memberId, ...data, isDemoMode: true },
-        success: true,
-        isDemoMode: true,
-      };
+  async createMember(societyId, data) {
+    try {
+      return await this.post(`/societies/${societyId}/members`, data);
+    } catch (error) {
+      if (this.isDemoMode()) {
+        const memberId = 'demo-member-' + Date.now();
+        return {
+          data: { id: memberId, ...data, isDemoMode: true },
+          success: true,
+          isDemoMode: true,
+        };
+      }
+      throw error;
     }
-    throw error;
   }
-}
+
   // ==================== INVOICE ENDPOINTS ====================
 
-async getInvoices(societyId, params = {}) {
-  try {
-    const query = new URLSearchParams(params).toString();
-    return await this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
-  } catch (error) {
-    if (this.isDemoMode()) {
-      return { data: [], success: true, isDemoMode: true };
+  async getInvoices(societyId, params = {}) {
+    try {
+      const query = new URLSearchParams(params).toString();
+      return await this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
+    } catch (error) {
+      if (this.isDemoMode()) {
+        return { data: [], success: true, isDemoMode: true };
+      }
+      throw error;
     }
-    throw error;
   }
 }
+
 // Create global instance
 const api = new APIClient();
 
 // Log current mode for debugging
-console.log('API Client initialized. Base URL:', api.baseURL);
-console.log('Demo mode available. Demo accounts: demo@society.com / Demo@123');
+console.log('✅ API Client initialized. Base URL:', api.baseURL);
+console.log('✅ Demo mode available. Demo accounts:', DEMO_ACCOUNTS.map(a => a.email).join(', '));
