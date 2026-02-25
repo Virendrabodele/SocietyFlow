@@ -272,32 +272,46 @@ class APIClient {
   }
 
   async login(email, password) {
-    try {
-      const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
-      this.setTokens(response.data.accessToken, response.data.refreshToken);
-      this.setUserProfile(response.data.user);
-      return response.data;
-    } catch (error) {
-      // ─── FIX 5: Fall back to demo accounts when backend unreachable ───
-      if (error.status === 0 || error.status === undefined) {
-        const demoAccount = DEMO_ACCOUNTS.find(
-          (acc) => acc.email === email && acc.password === password
+  try {
+    const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
+    this.setTokens(response.data.accessToken, response.data.refreshToken);
+    this.setUserProfile(response.data.user);
+    return response.data;
+  } catch (error) {
+    // Fall back to demo accounts when backend unreachable
+    if (error.status === 0 || error.status === undefined) {
+      const demoAccount = DEMO_ACCOUNTS.find(
+        (acc) => acc.email === email && acc.password === password
+      );
+      if (demoAccount) {
+        // ✅ Generate BOTH access token AND refresh token for demo mode
+        const demoAccessToken = DEMO_TOKEN_PREFIX + (
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).substring(2)
         );
-        if (demoAccount) {
-          const demoToken = DEMO_TOKEN_PREFIX + (
-            typeof crypto !== 'undefined' && crypto.randomUUID
-              ? crypto.randomUUID()
-              : Math.random().toString(36).substring(2)
-          );
-          this.setTokens(demoToken, null);
-          this.setUserProfile(demoAccount.user);
-          return { user: demoAccount.user, accessToken: demoToken, isDemoMode: true };
-        }
+        const demoRefreshToken = DEMO_TOKEN_PREFIX + (
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).substring(2)
+        );
+        
+        // ✅ Store both tokens
+        this.setTokens(demoAccessToken, demoRefreshToken);
+        this.setUserProfile(demoAccount.user);
+        
+        return { 
+          user: demoAccount.user, 
+          accessToken: demoAccessToken, 
+          refreshToken: demoRefreshToken,  // ✅ Include refresh token in response
+          isDemoMode: true 
+        };
       }
-      throw error;
     }
+    throw error;
   }
-
+}
+  
   async logout() {
     try {
       if (!this.isDemoMode()) {
