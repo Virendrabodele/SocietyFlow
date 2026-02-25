@@ -1,7 +1,7 @@
 /**
  * SocietyFlow API Client
  * Centralized API helper for communicating with the backend
- * COMPLETE VERSION WITH ALL FIXES APPLIED
+ * FIXED VERSION - Checks demo mode BEFORE API calls
  */
 
 // ─── FIX 1: Use config.js baseURL instead of hardcoded localhost ───
@@ -279,7 +279,7 @@ class APIClient {
           (acc) => acc.email === email && acc.password === password
         );
         if (demoAccount) {
-          // ✅ FIX: Generate BOTH access token and refresh token
+          // Generate BOTH access token and refresh token for demo mode
           const demoAccessToken = DEMO_TOKEN_PREFIX + (
             typeof crypto !== 'undefined' && crypto.randomUUID
               ? crypto.randomUUID()
@@ -291,7 +291,6 @@ class APIClient {
               : Math.random().toString(36).substring(2)
           );
 
-          // ✅ FIX: Store both tokens
           this.setTokens(demoAccessToken, demoRefreshToken);
           this.setUserProfile(demoAccount.user);
 
@@ -322,78 +321,81 @@ class APIClient {
   // ==================== SOCIETY ENDPOINTS ====================
 
   async getSocieties() {
+    // ✅ FIX: Check demo mode BEFORE calling API
+    if (this.isDemoMode()) {
+      console.log('📱 Demo mode: Loading societies from localStorage');
+      const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+      return {
+        data: demoDemoSocieties,
+        success: true,
+        isDemoMode: true,
+      };
+    }
+
     try {
       const response = await this.get('/societies');
       return response.data || response;
     } catch (error) {
-      // ✅ Demo mode fallback
-      if (error.status === 0 || error.status === undefined) {
-        if (this.isDemoMode()) {
-          const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-          return {
-            data: demoDemoSocieties,
-            success: true,
-            isDemoMode: true,
-          };
-        }
-      }
+      console.error('Error fetching societies:', error);
       throw error;
     }
   }
 
   async createSociety(data) {
+    // ✅ FIX: Check demo mode BEFORE calling API
+    if (this.isDemoMode()) {
+      console.log('📱 Demo mode: Creating society in localStorage');
+      const societyId = 'demo-society-' + Date.now();
+      const newSociety = {
+        id: societyId,
+        name: data.name,
+        address: data.address,
+        totalUnits: data.totalUnits,
+        contactEmail: data.contactEmail,
+        contactPhone: data.contactPhone,
+        createdAt: new Date().toISOString(),
+        isDemoMode: true,
+      };
+
+      const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+      demoDemoSocieties.push(newSociety);
+      localStorage.setItem('demo_societies', JSON.stringify(demoDemoSocieties));
+
+      return {
+        data: newSociety,
+        success: true,
+        isDemoMode: true,
+      };
+    }
+
     try {
       const response = await this.post('/societies', data);
       return response.data || response;
     } catch (error) {
-      // ✅ Demo mode fallback
-      if (error.status === 0 || error.status === undefined) {
-        if (this.isDemoMode()) {
-          const societyId = 'demo-society-' + Date.now();
-          const newSociety = {
-            id: societyId,
-            name: data.name,
-            address: data.address,
-            totalUnits: data.totalUnits,
-            contactEmail: data.contactEmail,
-            contactPhone: data.contactPhone,
-            createdAt: new Date().toISOString(),
-            isDemoMode: true,
-          };
-
-          const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-          demoDemoSocieties.push(newSociety);
-          localStorage.setItem('demo_societies', JSON.stringify(demoDemoSocieties));
-
-          return {
-            data: newSociety,
-            success: true,
-            isDemoMode: true,
-          };
-        }
-      }
+      console.error('Error creating society:', error);
       throw error;
     }
   }
 
   async deleteSociety(societyId) {
+    // ✅ FIX: Check demo mode BEFORE calling API
+    if (this.isDemoMode()) {
+      console.log('📱 Demo mode: Deleting society from localStorage');
+      const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
+      const filtered = demoDemoSocieties.filter(s => s.id !== societyId);
+      localStorage.setItem('demo_societies', JSON.stringify(filtered));
+
+      return {
+        success: true,
+        isDemoMode: true,
+      };
+    }
+
     try {
       const response = await this.delete(`/societies/${societyId}`);
       return response.data || response;
     } catch (error) {
-      // ✅ Demo mode fallback
-      if (error.status === 0 || error.status === undefined) {
-        if (this.isDemoMode()) {
-          const demoDemoSocieties = JSON.parse(localStorage.getItem('demo_societies') || '[]');
-          const filtered = demoDemoSocieties.filter(s => s.id !== societyId);
-          localStorage.setItem('demo_societies', JSON.stringify(filtered));
-
-          return {
-            success: true,
-            isDemoMode: true,
-          };
-        }
-      }
+      console.error('Error deleting society:', error);
       throw error;
     }
   }
@@ -401,28 +403,30 @@ class APIClient {
   // ==================== MEMBER ENDPOINTS ====================
 
   async getMembers(societyId) {
+    if (this.isDemoMode()) {
+      return { data: [], success: true, isDemoMode: true };
+    }
     try {
       return await this.get(`/societies/${societyId}/members`);
     } catch (error) {
-      if (this.isDemoMode()) {
-        return { data: [], success: true, isDemoMode: true };
-      }
+      console.error('Error fetching members:', error);
       throw error;
     }
   }
 
   async createMember(societyId, data) {
+    if (this.isDemoMode()) {
+      const memberId = 'demo-member-' + Date.now();
+      return {
+        data: { id: memberId, ...data, isDemoMode: true },
+        success: true,
+        isDemoMode: true,
+      };
+    }
     try {
       return await this.post(`/societies/${societyId}/members`, data);
     } catch (error) {
-      if (this.isDemoMode()) {
-        const memberId = 'demo-member-' + Date.now();
-        return {
-          data: { id: memberId, ...data, isDemoMode: true },
-          success: true,
-          isDemoMode: true,
-        };
-      }
+      console.error('Error creating member:', error);
       throw error;
     }
   }
@@ -430,13 +434,14 @@ class APIClient {
   // ==================== INVOICE ENDPOINTS ====================
 
   async getInvoices(societyId, params = {}) {
+    if (this.isDemoMode()) {
+      return { data: [], success: true, isDemoMode: true };
+    }
     try {
       const query = new URLSearchParams(params).toString();
       return await this.get(`/societies/${societyId}/invoices${query ? '?' + query : ''}`);
     } catch (error) {
-      if (this.isDemoMode()) {
-        return { data: [], success: true, isDemoMode: true };
-      }
+      console.error('Error fetching invoices:', error);
       throw error;
     }
   }
