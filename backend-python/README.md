@@ -18,7 +18,8 @@ The HTML frontend works with this backend unchanged — same API endpoints, same
 ## Project Structure
 
 ```
-app/
+SocietyFlow
+/backend-python/
 ├── main.py                  # FastAPI app, routes registration
 ├── core/
 │   ├── config.py            # Settings (from .env)
