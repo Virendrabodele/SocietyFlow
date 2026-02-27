@@ -7,7 +7,7 @@ from app.db.database import get_db
 from app.models.models import (
     User, Member, BillingLineItem, Invoice, Payment,
     Receipt, PaymentUploadReference, PaymentUploadStatus,
-    InvoiceStatus, ReceiptStatus
+    InvoiceStatus, ReceiptStatus,Receipt, InvoiceStatus
 )
 from app.core.dependencies import get_current_user, verify_society_access
 from app.schemas.schemas import (
@@ -15,6 +15,11 @@ from app.schemas.schemas import (
     CreateReceiptRequest, InvoiceResponse
 )
 from app.services.invoice_service import generate_invoice_for_member
+from app.services.activity_logger import (
+    log_invoice_generation,
+    log_maintenance_calculation,
+    log_bank_receipt_activity,
+)
 import uuid
 
 router = APIRouter()
@@ -64,15 +69,38 @@ async def generate_invoices(
             line_items, base_seq + i + 1,
         )
         if invoice:
-            generated.append(invoice.id)
+            generated.append(invoice)
+            await log_maintenance_calculation(
+                db,
+                user_id=current_user.id,
+                society_id=society_id,
+                member_id=member.id,
+                calculation_type="INVOICE_GENERATION",
+                amount=invoice.total_amount,
+                meta={
+                    "invoice_id": invoice.id,
+                    "period_month": body.period_month,
+                    "period_year": body.period_year,
+                },
+            )
         else:
             skipped.append(member.unit_no)
+            
+    await log_invoice_generation(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        period_month=body.period_month,
+        period_year=body.period_year,
+        generated_count=len(generated),
+        skipped_count=len(skipped),
+    )        
 
     return {
         "generated": len(generated),
         "skipped": len(skipped),
         "skipped_units": skipped,
-        "invoice_ids": generated,
+        "invoice_ids": [inv.id for inv in generated],
     }
 
 
@@ -163,6 +191,15 @@ async def create_payment(
     )
 
     await db.flush()
+    await log_bank_receipt_activity(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        invoice_id=invoice_id,
+        receipt_id=None,
+        action="PAYMENT_CREATED",
+        details={"payment_id": payment.id, "amount_paid": body.amount_paid, "mode": body.mode},
+    )
     return {"id": payment.id, "message": "Payment recorded successfully"}
 
 
@@ -206,5 +243,13 @@ async def create_receipt(
     )
     db.add(receipt)
     await db.flush()
-
+    await log_bank_receipt_activity(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        invoice_id=invoice_id,
+        receipt_id=receipt.id,
+        action="RECEIPT_CREATED",
+        details={"receipt_no": receipt_no, "amount_received": receipt.amount_received},
+    )
     return {"id": receipt.id, "receipt_no": receipt_no, "message": "Receipt created"}
