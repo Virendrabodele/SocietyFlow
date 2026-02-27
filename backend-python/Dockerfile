@@ -18,5 +18,8 @@ COPY . .
 
 EXPOSE 10000
 
+# Set Python path so all imports resolve from /app
+ENV PYTHONPATH=/app
+
 # Run migrations then start the server
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}
+CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
