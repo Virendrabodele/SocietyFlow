@@ -1,54 +1,74 @@
 services:
+  # ──────────────────────────────────────────
+  # Python / FastAPI Backend
+  # ──────────────────────────────────────────
   - type: web
     name: societyflow-api
-    runtime: node
+    runtime: python
     plan: free
-    rootDir: backend
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && npm start
-    healthCheckPath: /health/ready
+    rootDir: backend-python
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health/live
     envVars:
-      - key: NODE_ENV
+      # App
+      - key: ENV
         value: production
-      - key: PORT
-        value: 10000
-      - key: API_PREFIX
-        value: /api/v1
+
+      # Database — Supabase (set this manually in Render dashboard)
+      # Use postgresql+asyncpg:// prefix for Python async SQLAlchemy
+      - key: DATABASE_URL
+        value: postgresql+asyncpg://postgres:YOUR_PASSWORD@db.ckabwxehfvfkzjureiog.supabase.co:5432/postgres
+
+      # JWT Secrets — Render auto-generates secure random values
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
-      - key: JWT_ACCESS_EXPIRY
-        value: 15m
-      - key: JWT_REFRESH_EXPIRY
-        value: 7d
-      - key: DATABASE_URL
-        fromDatabase:
-          name: societyflow-db
-          property: connectionString
+      - key: JWT_ACCESS_EXPIRE_MINUTES
+        value: 15
+      - key: JWT_REFRESH_EXPIRE_DAYS
+        value: 7
+
+      # Redis — from the Render Redis service below
       - key: REDIS_URL
         fromService:
           name: societyflow-redis
           type: redis
           property: connectionString
-      - key: CORS_ORIGIN
-        value: https://virendrabodele.github.io
-      - key: LOG_LEVEL
-        value: info
-      - key: RATE_LIMIT_WINDOW_MS
-        value: 900000
-      - key: RATE_LIMIT_MAX_REQUESTS
-        value: 100
-      - key: LOGIN_RATE_LIMIT_MAX
-        value: 10
 
+      # CORS — your GitHub Pages frontend URL
+      - key: CORS_ORIGINS
+        value: '["https://virendrabodele.github.io"]'
+
+      # Encryption key — must be exactly 32 characters
+      - key: ENCRYPTION_KEY
+        generateValue: true
+
+      # Email (optional — fill in if you use email notifications)
+      - key: SMTP_HOST
+        value: ""
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: ""
+      - key: SMTP_PASSWORD
+        value: ""
+
+      # SMS / Twilio (optional)
+      - key: TWILIO_ACCOUNT_SID
+        value: ""
+      - key: TWILIO_AUTH_TOKEN
+        value: ""
+      - key: TWILIO_PHONE_NUMBER
+        value: ""
+
+  # ──────────────────────────────────────────
+  # Redis (free tier)
+  # ──────────────────────────────────────────
   - type: redis
     name: societyflow-redis
     plan: free
     ipAllowList: []
 
-databases:
-  - name: societyflow-db
-    databaseName: societyflow
-    user: societyflow
-    plan: free
+  # NOTE: No database section here — using Supabase instead of Render DB
