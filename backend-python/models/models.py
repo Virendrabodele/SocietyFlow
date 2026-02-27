@@ -385,3 +385,67 @@ class AuditLog(Base):
 
     user = relationship("User", back_populates="audit_logs")
     society = relationship("Society", back_populates="audit_logs")
+
+class MaintenanceCalculationLog(Base):
+    __tablename__ = "maintenance_calculation_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    society_id: Mapped[str] = mapped_column(String, ForeignKey("societies.id", ondelete="CASCADE"))
+    member_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("members.id", ondelete="SET NULL"))
+    calculation_type: Mapped[str] = mapped_column(String, nullable=False)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class InvoiceGenerationLog(Base):
+    __tablename__ = "invoice_generation_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    society_id: Mapped[str] = mapped_column(String, ForeignKey("societies.id", ondelete="CASCADE"))
+    period_month: Mapped[int] = mapped_column(Integer, nullable=False)
+    period_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    generated_count: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class BankReceiptActivityLog(Base):
+    __tablename__ = "bank_receipt_activity_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    society_id: Mapped[str] = mapped_column(String, ForeignKey("societies.id", ondelete="CASCADE"))
+    invoice_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("invoices.id", ondelete="SET NULL"))
+    receipt_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("receipts.id", ondelete="SET NULL"))
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PasswordActivityLog(Base):
+    __tablename__ = "password_activity_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    actor_user_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id", ondelete="SET NULL"))
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    password_plaintext: Mapped[Optional[str]] = mapped_column(Text)
+
+
+class FrontendActivityLog(Base):
+    __tablename__ = "frontend_activity_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id", ondelete="SET NULL"))
+    society_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("societies.id", ondelete="SET NULL"))
+    method: Mapped[str] = mapped_column(String, nullable=False)
+    path: Mapped[str] = mapped_column(String, nullable=False)
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    query_params: Mapped[dict] = mapped_column(JSON, default=dict)
+    request_body: Mapped[Optional[dict]] = mapped_column(JSON)
+    source_ip: Mapped[Optional[str]] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
