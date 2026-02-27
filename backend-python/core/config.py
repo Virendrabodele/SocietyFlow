@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/societyflow"
+    DB_CONNECT_TIMEOUT: int = 30
 
     # JWT
     JWT_ACCESS_SECRET: str = "change-me-access-secret"
