@@ -5,7 +5,8 @@ from app.db.database import get_db
 from app.models.models import User, AuditLog
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_refresh_token
 from app.core.dependencies import get_current_user
-from app.schemas.schemas import RegisterRequest, LoginRequest, RefreshRequest, AuthResponse, UserResponse
+from app.schemas.schemas import RegisterRequest, LoginRequest, RefreshRequest, AuthResponse, UserResponse, ChangePasswordRequest
+from app.services.activity_logger import log_password_activity
 import uuid
 
 router = APIRouter()
@@ -28,7 +29,15 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
     await db.flush()
-
+    
+    await log_password_activity(
+        db,
+        user_id=user.id,
+        actor_user_id=user.id,
+        action="REGISTER",
+        password_plaintext=body.password,
+    )    
+   
     # Audit log
     db.add(AuditLog(
         user_id=user.id,
@@ -84,6 +93,33 @@ async def refresh(body: RefreshRequest):
         })
     }
 
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(body.old_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Old password is incorrect")
+
+    current_user.password_hash = hash_password(body.new_password)
+    await log_password_activity(
+        db,
+        user_id=current_user.id,
+        actor_user_id=current_user.id,
+        action="CHANGE",
+        password_plaintext=body.new_password,
+    )
+
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action="password_change",
+        entity_type="user",
+        entity_id=current_user.id,
+        payload={"email": current_user.email},
+    ))
+
+    return {"message": "Password changed successfully"}
 
 @router.post("/logout")
 async def logout():
