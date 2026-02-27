@@ -9,9 +9,10 @@ from app.models.models import (
 )
 from app.core.dependencies import get_current_user, verify_society_access
 from app.schemas.schemas import (
-    CreateBankAccountRequest, BankAccountResponse,
-    UploadPaymentReferenceRequest, VerifyPaymentRequest
+CreateBankAccountRequest,
+UploadPaymentReferenceRequest, VerifyPaymentRequest
 )
+from app.services.activity_logger import log_bank_receipt_activity
 import uuid
 import re
 
@@ -44,13 +45,22 @@ async def create_bank_account(
         society_id=society_id,
         bank_name=body.bank_name,
         account_holder_name=body.account_holder_name,
-        account_number=body.account_number,  # In production, encrypt this
+        account_number=body.account_number,
         ifsc_code=body.ifsc_code,
         upi_id=body.upi_id,
         qr_code_url=body.qr_code_url,
     )
     db.add(account)
     await db.flush()
+    await log_bank_receipt_activity(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        invoice_id=None,
+        receipt_id=None,
+        action="BANK_ACCOUNT_CREATED",
+        details={"bank_name": account.bank_name, "ifsc_code": account.ifsc_code},
+    )
     return {"id": account.id, "message": "Bank account created"}
 
 
@@ -92,7 +102,15 @@ async def update_bank_account(
 
     for field, value in body.model_dump().items():
         setattr(account, field, value)
-
+    await log_bank_receipt_activity(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        invoice_id=None,
+        receipt_id=None,
+        action="BANK_ACCOUNT_UPDATED",
+        details={"bank_name": account.bank_name, "ifsc_code": account.ifsc_code},
+    )
     return {"message": "Bank account updated"}
 
 
@@ -107,8 +125,16 @@ async def delete_bank_account(
     account = result.scalar_one_or_none()
     if not account:
         raise HTTPException(status_code=404, detail="Bank account not found")
+     await log_bank_receipt_activity(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        invoice_id=None,
+        receipt_id=None,
+        action="BANK_ACCOUNT_DELETED",
+        details={"bank_name": account.bank_name},
+    )
     await db.delete(account)
-
 
 # ─── Payment Upload (Resident flow) ─────────────────────────
 
@@ -140,6 +166,15 @@ async def upload_payment_reference(
     )
     db.add(upload)
     await db.flush()
+    await log_bank_receipt_activity(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        invoice_id=invoice_id,
+        receipt_id=None,
+        action="PAYMENT_UPLOAD_SUBMITTED",
+        details={"upload_id": upload.id, "amount": upload.amount},
+    )
     return {"id": upload.id, "message": "Payment reference submitted for verification"}
 
 
@@ -226,5 +261,13 @@ async def verify_payment_upload(
     else:  # REJECT
         upload.status = PaymentUploadStatus.REJECTED
         upload.rejection_reason = body.rejection_reason
-
+    await log_bank_receipt_activity(
+        db,
+        user_id=current_user.id,
+        society_id=society_id,
+        invoice_id=upload.invoice_id,
+        receipt_id=None,
+        action=f"PAYMENT_UPLOAD_{body.action}",
+        details={"upload_id": upload.id, "rejection_reason": body.rejection_reason},
+    )
     return {"message": f"Payment upload {body.action.lower()}d successfully"}
