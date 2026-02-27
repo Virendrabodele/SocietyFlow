@@ -16,6 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy app
 COPY . .
 
+# Create 'app' symlink so "from app.X import Y" works
+# (the codebase uses app.X style imports throughout)
+RUN ln -s /app /app/app
+
 EXPOSE 10000
 
 # Set Python path so all imports resolve from /app
