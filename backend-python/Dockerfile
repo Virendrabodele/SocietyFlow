@@ -19,11 +19,12 @@ COPY . .
 # Create 'app' symlink so "from app.X import Y" works
 # (the codebase uses app.X style imports throughout)
 RUN ln -s /app /app/app
+RUN chmod +x /app/start.sh
 
 EXPOSE 10000
 
 # Set Python path so all imports resolve from /app
 ENV PYTHONPATH=/app
 
-# Run migrations then start the server
-CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+# Run migrations with retry, then start the server
+CMD ["/app/start.sh"]
