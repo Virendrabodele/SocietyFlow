@@ -735,6 +735,36 @@
         function isMasterUser(user) {
             return !!(user && MASTER_EMAILS.includes((user.email || '').toLowerCase()));
         }
+        
+        function parseAddress(address) {
+            if (!address || typeof address !== 'string') {
+                return { city: '', state: '' };
+            }
+            const parts = address.split(',').map((part) => part.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+                return { city: parts[0], state: parts[parts.length - 1] };
+            }
+            return { city: parts[0] || '', state: '' };
+        }
+
+        function getSocietyLocation(society) {
+            const city = society.city || parseAddress(society.address).city;
+            const state = society.state || parseAddress(society.address).state;
+            if (!city && !state) {
+                return 'Location not set';
+            }
+            return [city, state].filter(Boolean).join(', ');
+        }
+
+        function generateSocietyCode(name) {
+            const prefix = (name || 'SOC')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '')
+                .slice(0, 4)
+                .padEnd(3, 'X');
+            const suffix = Date.now().toString().slice(-6);
+            return `${prefix}-${suffix}`;
+        }
 
         // Load user data on page load - API-based
         window.addEventListener('load', async function() {
@@ -826,6 +856,10 @@
                 const societies = await api.getSocieties();
                 const addBtn = document.getElementById('addSocietyButton');
 
+                if (api.isDemoMode()) {
+                    alert('⚠️ You are in Demo Mode. Data is saved only in your browser and will NOT be written to Neon/PostgreSQL. Please login with your real backend account.');
+                }
+
                 document.getElementById('totalSocieties').textContent = societies.length;
 
                 if (!isMasterUser(user) && societies.length >= 1) {
@@ -859,7 +893,7 @@
                     <div class="society-card-header">
                         <div class="society-icon">🏘️</div>
                         <h2>${society.name}</h2>
-                        <p>${society.city}, ${society.state}</p>
+                        <p>${getSocietyLocation(society)}</p>
                     </div>
                     <div class="society-card-body">
                         <div class="society-info">
@@ -1032,10 +1066,10 @@
                 // Create society data for API
                 const societyData = {
                     name: name,
-                    address: `${city}, ${state}`,
-                    totalUnits: parseInt(units),
-                    contactEmail: email,
-                    contactPhone: mobile
+                    code: generateSocietyCode(name),
+                    city: city,
+                    state: state,
+                    units: parseInt(units)
                 };
 
                 // Call API to create society
