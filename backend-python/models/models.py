@@ -122,7 +122,7 @@ class User(Base):
 
 
 class Society(Base):
-    __tablename__ = "society"
+    __tablename__ = "societies"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(String, nullable=False)
