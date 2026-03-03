@@ -125,7 +125,7 @@ async def delete_bank_account(
     account = result.scalar_one_or_none()
     if not account:
         raise HTTPException(status_code=404, detail="Bank account not found")
-     await log_bank_receipt_activity(
+    await log_bank_receipt_activity(
         db,
         user_id=current_user.id,
         society_id=society_id,
