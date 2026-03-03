@@ -25,4 +25,5 @@ ENV PYTHONPATH=/app
 EXPOSE 10000
 
 # Run migrations then start server
-CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+# CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
