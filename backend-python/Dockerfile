@@ -28,3 +28,7 @@ ENV PYTHONPATH=/app
 
 # Run migrations with retry, then start the server
 CMD ["/app/start.sh"]
+
+RUN ln -s /app /app/app
+ENV PYTHONPATH=/app
+CMD alembic upgrade head && uvicorn main:app
