@@ -18,7 +18,7 @@ COPY . .
 
 # Create 'app' symlink so "from app.X import Y" works
 # (the codebase uses app.X style imports throughout)
-RUN ln -s /app /app/app
+RUN ln -sfn /app /app/app 2>/dev/null || true
 RUN chmod +x /app/start.sh
 
 EXPOSE 10000
