@@ -100,6 +100,10 @@ app.include_router(reports.router, prefix="/api/v1/societies", tags=["Reports"])
 
 @app.on_event("startup")
 async def startup():
+    from app.db.database import engine
+    from app.models.models import Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     print(f"🚀 SocietyFlow API started [{settings.ENV}]")
 
 @app.on_event("shutdown")
