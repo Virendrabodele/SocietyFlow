@@ -8,7 +8,8 @@ const CONFIG = {
     // Find it in Render dashboard → your service → the .onrender.com URL
     baseURL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3000/api/v1'
-      : 'https://societyflow-api.onrender.com/api/v1', // ← REPLACE with your Render URL
+      : 'https://societyflow-api.onrender.com/api/v1',
+      : window.location.origin + '/api/v1',// ← REPLACE with your Render URL
     timeout: 30000,
   },
 
